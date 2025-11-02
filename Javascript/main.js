@@ -8,7 +8,7 @@
  */
 function initializeApp() {
     try {
-        console.log('🚀 Initializing OS Disk Scheduling Simulator...');
+        console.log('Initializing OS Disk Scheduling Simulator...');
 
         // 1. Get UI Panel Elements
         const configPanel = document.getElementById('config-panel');
@@ -112,10 +112,10 @@ function initializeApp() {
         // controller.updateAllUI();
         // --- END MODIFICATION ---
 
-        console.log('✅ Application ready!');
+        console.log('Application ready!');
 
     } catch (error) {
-        console.error('❌ Error initializing application:', error);
+        console.error('Error initializing application:', error);
         // Use a less intrusive error display
         const errorEl = document.getElementById('currentActionText');
         if (errorEl) {

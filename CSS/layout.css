@@ -1,19 +1,15 @@
 /* =====================================================
- * CSS/LAYOUT.CSS - Main Application Layout
+ * CSS/LAYOUT.CSS - Main Page Structure
  * ===================================================== */
 
-:root {
-  --sidebar-width: 320px;
-  --header-height: 60px;
-}
-
+/* ===================================
+ * Main App Container
+ * =================================== */
 .app-container {
   display: grid;
-  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-columns: 350px 1fr; /* Sidebar | Main Content */
   height: 100vh;
-  width: 100vw;
-  overflow: hidden;
-  background-color: var(--color-background-light);
+  overflow: hidden; /* Prevent full page scroll */
 }
 
 /* ===================================
@@ -21,180 +17,214 @@
  * =================================== */
 .sidebar {
   background-color: var(--color-background);
-  border-right: 1px solid var(--color-border);
-  overflow-y: auto;
+  border-right: var(--theme-border-style);
+  padding: 1.25rem;
+  overflow-y: auto; /* Allow sidebar to scroll */
   height: 100vh;
 }
 
-.control-panel {
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.sidebar .header-title {
+  margin-bottom: 1.5rem;
+  text-align: left;
+  border-bottom: var(--theme-border-style);
+  padding-bottom: 1rem;
 }
 
-.header-title {
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.header-title h1 {
-  font-size: 1.25rem;
-  font-weight: var(--font-weight-semibold);
+.sidebar .header-title h1 {
+  font-size: 1.5rem;
+  font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  line-height: 1.2;
 }
 
-.header-title p {
-  font-size: 0.875rem;
+.sidebar .header-title p {
+  font-size: 1rem;
+  font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
 }
 
-.control-grid {
+.sidebar .control-grid {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem; /* Reduced gap */
+  gap: 5rem; /* MODIFICATION: Increased from 1rem */
 }
 
-.control-row {
+.sidebar .control-row {
   display: flex;
-  gap: 0.75rem; /* Reduced gap */
   flex-wrap: wrap;
+  gap: 1rem; /* This is the gap between "Initial Head" and "Max Track" */
 }
 
-.control-group {
-  flex: 1 1 0;
+.sidebar .control-group {
+  padding-bottom: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem; /* Reduced gap */
-  min-width: 120px;
+  gap: 0.28rem; /* MODIFICATION: Increased from 0.35rem */
+  flex: 1 1 100px; /* Allow items to grow and shrink */
 }
 
-.control-group.full-width {
+.sidebar .control-group.full-width {
   flex-basis: 100%;
 }
 
-.direction-group {
-  flex-basis: 100%;
+.sidebar .button-row #resetBtn {
+  grid-column: 1 / -1; /* Make reset button span full width */
 }
 
-.radio-group {
+.sidebar .direction-group {
+  flex-basis: 100%;
+  padding: 0.75rem;
+  border: 2px solid var(--color-border-light);
+  border-radius: var(--border-radius-sm);
+  background: var(--color-background-light);
+}
+
+.sidebar .radio-group {
   display: flex;
-  gap: 1rem;
-  padding-top: 0.25rem;
+  gap: 1.5rem;
+  margin-top: 0.25rem;
 }
 
-.button-row {
+.sidebar .button-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
-.speed-control-group {
-  flex-grow: 1;
+#exportBtn {
+  margin-bottom: 0.8rem;
+}
+
+.sidebar .button-row .btn-primary {
+  grid-column: 1 / -1; 
+}
+
+.sidebar .speed-control-group {
+  padding-bottom: 1rem;
+  padding-top: 2rem;
+  flex-basis: 100%;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
 }
 
-.speed-slider-container {
+.sidebar .speed-slider-container {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
-/* ===================================
- * Information Panel (Inside Sidebar)
- * =================================== */
-.information-panel {
-  padding: 0 1rem 1rem 1rem;
+/* Sidebar Info Panel */
+.sidebar .information-panel {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem; /* Reduced gap */
+  gap: 1.25rem; 
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: var(--theme-border-style);
 }
 
-.info-section {
-  background-color: var(--color-background-light);
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--border-radius-md);
-  padding: 0.75rem 1rem; /* Reduced padding */
+.sidebar .info-section {
+  padding: 0; /* Padding is now on the h3 */
+  border: none;
+  box-shadow: none;
 }
 
-.info-section h3 {
-  font-size: 0.875rem; /* Reduced font size */
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  margin-bottom: 0.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.queue-container {
-  min-height: 40px;
-  max-height: 120px;
-  overflow-y: auto;
-  background-color: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-sm);
-  padding: 0.5rem;
-}
-
-.queue-list {
+.sidebar .queue-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: var(--color-background-light);
+  border-radius: var(--border-radius-sm);
+  border: 2px solid var(--theme-grey-mid);
+  min-height: 50px;
 }
 
 /* ===================================
  * Visualization Panel (Column 2)
  * =================================== */
 .visualization-panel {
-  height: 100vh;
-  overflow-y: auto; /* Changed from hidden to auto */
-  padding: 1rem;
   display: flex;
   flex-direction: column;
-  /* --- MODIFICATION: Reduced gap --- */
-  gap: 0.5rem; 
+  gap: 1.25rem; 
+  padding: 1.25rem; 
+  overflow-y: auto; /* Allow main content to scroll */
+  height: 100vh;
+  background-color: var(--color-background-light);
+}
+
+/* Stats Card Layout */
+.stats-card {
+  width: 100%;
 }
 
 .stats-grid {
   display: grid;
+  /* MODIFICATION: 5 equal columns */
   grid-template-columns: repeat(5, 1fr);
-  /* --- MODIFICATION: Reduced gap --- */
-  gap: 0.5rem;
+  gap: 0.75rem;
+}
+
+/* Disk & Graph Container Layout */
+.disk-container,
+.graph-container {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  overflow: hidden; /* Hide canvas overflow */
 }
 
 .disk-container {
-  width: 100%;
-  background-color: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
-  box-shadow: var(--shadow-sm);
-  padding: 0;
-  overflow: hidden; /* Important for canvas */
-}
-
-.graph-container {
-  width: 100%;
-  background-color: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
-  box-shadow: var(--shadow-sm);
-  padding: 1rem;
-  padding-top: 1.5rem; /* More space for top labels */
-  overflow: hidden;
+  position: relative; /* For the head tracker */
+  padding-top: 2.5rem; /* Space for the head tracker */
 }
 
 .graph-container h3 {
   font-size: 1rem;
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
-  text-align: center;
+  text-transform: uppercase;
   margin-bottom: 0.5rem;
-  display: none; /* We draw title on canvas */
+  text-align: center;
+}
+
+.step-info {
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+/* ===================================
+ * Responsive (Mobile)
+ * =================================== */
+@media (max-width: 1024px) {
+  .app-container {
+    grid-template-columns: 1fr; /* Stack columns */
+    height: auto;
+    overflow: auto; /* Allow full page scroll */
+  }
+
+  .sidebar {
+    height: auto;
+    border-right: none;
+    border-bottom: var(--theme-border-style);
+  }
+
+  .visualization-panel {
+    height: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr 1fr; /* 2 columns */
+  }
+
+  /* Make last item span full width if odd number */
+  .stats-grid .stat-box:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
 }
 

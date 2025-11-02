@@ -187,12 +187,12 @@ class Controller {
 
         if (shouldBeRunning) {
             this.state.resume();
-            this.ui.playPauseBtn.innerHTML = '<span class="btn-icon">⏸️</span><span class="btn-text">Pause</span>';
+            this.ui.playPauseBtn.innerHTML = '<span class="btn-text">Pause</span>';
             this.ui.playPauseBtn.classList.add('active');
             this.startAnimation();
         } else {
             this.state.pause();
-            this.ui.playPauseBtn.innerHTML = '<span class="btn-icon">▶️</span><span class="btn-text">Play</span>';
+            this.ui.playPauseBtn.innerHTML = '<span class="btn-text">Play</span>';
             this.ui.playPauseBtn.classList.remove('active');
             this.stopAnimation();
         }
@@ -214,7 +214,7 @@ class Controller {
                 // --- Animation finished ---
                 this.stopAnimation();
                 this.state.pause();
-                this.ui.playPauseBtn.innerHTML = '<span class="btn-icon">🔄</span><span class="btn-text">Replay</span>';
+                this.ui.playPauseBtn.innerHTML = '<span class="btn-text">Replay</span>';
                 this.ui.playPauseBtn.classList.remove('active');
             } else {
                  // Normal step
@@ -273,7 +273,7 @@ class Controller {
         this.renderer.resetTrace();
         this.renderer.updateTraceHistory();
 
-        this.ui.playPauseBtn.innerHTML = '<span class="btn-icon">▶️</span><span class="btn-text">Play</span>';
+        this.ui.playPauseBtn.innerHTML = '<span class="btn-text">Play</span>';
         this.ui.playPauseBtn.classList.remove('active');
 
         // --- MODIFICATION: Call full UI update ---
