@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Interactive OS Disk Scheduling Algorithm Visualizer">
+    <title>OS Disk Scheduling Simulator</title>
+
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/animations.css">
+
+    <!-- External Libraries for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+
+        <!-- ========================
+            SECTION A: CONTROL PANEL (TOP BAR)
+            ======================== -->
+        <header class="control-panel">
+            <div class="header-title">
+                <h1>🖥️ OS Disk Scheduling Simulator</h1>
+                <p>Interactive Visualization of Disk Scheduling Algorithms</p>
+            </div>
+
+            <div class="control-grid">
+
+                <!-- Row 1: Algorithm Selection & Parameters -->
+                <div class="control-row">
+                    <div class="control-group">
+                        <label for="algorithmSelect">Algorithm:</label>
+                        <select id="algorithmSelect">
+                            <option value="fcfs">FCFS (First Come First Serve)</option>
+                            <option value="sstf">SSTF (Shortest Seek Time First)</option>
+                            <option value="scan">SCAN (Elevator Algorithm)</option>
+                            <option value="cscan">C-SCAN (Circular SCAN)</option>
+                            <option value="look">LOOK</option>
+                            <option value="clook">C-LOOK (Circular LOOK)</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="initialHeadPosition">Initial Head Position:</label>
+                        <input type="number" id="initialHeadPosition" value="53" min="0" placeholder="e.g., 53">
+                    </div>
+
+                    <div class="control-group">
+                        <label for="maxTrackNumber">Max Track Number:</label>
+                        <input type="number" id="maxTrackNumber" value="199" min="10" placeholder="e.g., 199">
+                    </div>
+                </div>
+
+                <!-- Row 2: Request Queue & Direction -->
+                <div class="control-row">
+                    <div class="control-group full-width">
+                        <label for="requestQueue">Request Queue (comma-separated):</label>
+                        <input type="text" id="requestQueue" value="98, 183, 37, 122, 14, 124, 65, 67" placeholder="e.g., 98, 183, 37, 122, 14, 124, 65, 67">
+                    </div>
+
+                    <div class="control-group direction-group">
+                        <label>Direction (for SCAN/LOOK):</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="direction" value="low" checked>
+                                Towards 0 (Low)
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="direction" value="high">
+                                Towards Max (High)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 3: Animation Controls -->
+                <div class="control-row button-row">
+                    <button id="runBtn" class="btn btn-primary" title="Play/Pause Animation">
+                        <span class="btn-icon">▶️</span>
+                        <span class="btn-text">Run</span>
+                    </button>
+
+                    <button id="stepBackwardBtn" class="btn btn-secondary" title="Step Backward">
+                        <span class="btn-icon">⏪</span>
+                        <span class="btn-text">Step Back</span>
+                    </button>
+
+                    <button id="stepForwardBtn" class="btn btn-secondary" title="Step Forward">
+                        <span class="btn-icon">⏩</span>
+                        <span class="btn-text">Step Forward</span>
+                    </button>
+
+                    <button id="resetBtn" class="btn btn-danger" title="Reset Simulation">
+                        <span class="btn-icon">🔄</span>
+                        <span class="btn-text">Reset</span>
+                    </button>
+                </div>
+
+                <!-- Row 4: Speed Control & Export -->
+                <div class="control-row">
+                    <div class="speed-control-group">
+                        <label for="speedSlider">Animation Speed:</label>
+                        <div class="speed-slider-container">
+                            <span class="speed-label">Slow</span>
+                            <input type="range" id="speedSlider" min="1" max="10" value="5" class="slider">
+                            <span class="speed-label">Fast</span>
+                        </div>
+                    </div>
+
+                    <button id="exportBtn" class="btn btn-success" title="Export to PDF">
+                        <span class="btn-icon">📄</span>
+                        <span class="btn-text">Export PDF</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- ========================
+            MAIN CONTENT AREA
+            ======================== -->
+        <div class="main-content">
+
+            <!-- ========================
+                SECTION B: VISUALIZATION PANEL (CENTER)
+                ======================== -->
+            <section class="visualization-panel">
+                <div class="visualization-header">
+                    <h2>Disk Scheduling Visualization</h2>
+                    <p id="algorithmDescription" class="algorithm-description">
+                        FCFS: Serves requests in the order they arrive, without optimization.
+                    </p>
+                </div>
+
+                <!-- Disk Representation -->
+                <div class="disk-container">
+                    <canvas id="diskCanvas" class="disk-canvas" width="1000" height="150"></canvas>
+                </div>
+
+                <!-- Current Action Text -->
+                <div class="action-text-container">
+                    <p id="currentActionText" class="action-text">
+                        Click "Generate" to start the simulation
+                    </p>
+                </div>
+
+                <!-- Position vs. Time Graph -->
+                <div class="graph-container">
+                    <h3>Position vs. Time Graph</h3>
+                    <canvas id="graphCanvas" class="graph-canvas" width="1000" height="300"></canvas>
+                </div>
+
+                <!-- Step Information -->
+                <div class="step-info">
+                    <span id="currentStepDisplay">Step: 0 / 0</span>
+                </div>
+            </section>
+
+            <!-- ========================
+                SECTION C: INFORMATION PANEL (RIGHT/BOTTOM SIDE)
+                ======================== -->
+            <aside class="information-panel">
+                <div class="info-section">
+                    <h3>📊 Live Statistics</h3>
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <span class="stat-label">Current Head Position</span>
+                            <span class="stat-value" id="currentHeadPosition">0</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-label">Total Head Movement</span>
+                            <span class="stat-value" id="totalHeadMovement">0</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-label">Seeks Count</span>
+                            <span class="stat-value" id="seeksCount">0</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-label">Average Seek Time</span>
+                            <span class="stat-value" id="averageSeekTime">0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pending Queue -->
+                <div class="info-section">
+                    <h3>⏳ Pending Queue</h3>
+                    <div class="queue-container">
+                        <div id="pendingQueue" class="queue-list">
+                            <span class="queue-empty">No requests loaded</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Serviced Order -->
+                <div class="info-section">
+                    <h3>✅ Serviced Order</h3>
+                    <div class="queue-container">
+                        <div id="servicedQueue" class="queue-list">
+                            <span class="queue-empty">No services yet</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Next Target -->
+                <div class="info-section">
+                    <h3>🎯 Next Target</h3>
+                    <div class="next-target-box">
+                        <span id="nextTargetDisplay" class="next-target">-</span>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- ========================
+        JAVASCRIPT FILES (LOAD IN DEPENDENCY ORDER)
+        ======================== -->
+
+    <!-- Phase 1: State Management (No dependencies) -->
+    <script src="js/state-manager.js"></script>
+
+    <!-- Phase 2: Canvas Rendering (Depends on State Manager) -->
+    <script src="js/canvas-renderer.js"></script>
+
+    <!-- Phase 3: Algorithm Base Class (No dependencies) -->
+    <script src="js/algorithms/algorithm-base.js"></script>
+
+    <!-- Phase 4: Individual Algorithms (Depend on Algorithm Base) -->
+    <script src="js/algorithms/fcfs.js"></script>
+    <script src="js/algorithms/sstf.js"></script>
+    <script src="js/algorithms/scan.js"></script>
+    <script src="js/algorithms/cscan.js"></script>
+    <script src="js/algorithms/look.js"></script>
+    <script src="js/algorithms/clook.js"></script>
+
+    <!-- Phase 5: Controller (Depends on all above) -->
+    <script src="js/controller.js"></script>
+
+    <!-- Phase 6: Main Entry Point (Depends on everything) -->
+    <script src="js/main.js"></script>
+
+</body>
+</html>
