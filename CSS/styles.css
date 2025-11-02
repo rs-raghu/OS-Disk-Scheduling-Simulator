@@ -415,3 +415,20 @@ input[type=range]::-moz-range-track {
   display: none;
 }
 
+/* ===================================
+ * NEW: DISK TOOLTIP
+ * =================================== */
+#disk-tooltip {
+  display: none;
+  position: absolute; /* Positioned by JavaScript */
+  background-color: var(--theme-black);
+  color: var(--theme-white);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--theme-radius);
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-semibold);
+  z-index: 100;
+  pointer-events: none; /* So it doesn't block the mouse */
+  box-shadow: var(--theme-shadow-hover);
+  border: 2px solid var(--theme-white);
+}

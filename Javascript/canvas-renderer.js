@@ -12,6 +12,10 @@ class CanvasRenderer {
 
         // --- Get HTML element for head tracker ---
         this.headTrackerElement = document.getElementById('headPositionTracker');
+        
+        // --- MODIFICATION: Get HTML element for Tooltip ---
+        this.tooltipElement = document.getElementById('disk-tooltip');
+        // --- END MODIFICATION ---
 
         // Canvas settings
         this.diskPadding = 60;
@@ -31,12 +35,18 @@ class CanvasRenderer {
 
         // Trace history for line drawing
         this.traceHistory = [];
+        
+        // --- MODIFICATION: Store disk rect for mouse tracking ---
+        this.diskRect = { x: 0, y: 0, width: 0, height: 0 };
+        this.dotRadius = 6;
+        // --- END MODIFICATION ---
+        
+        // --- MODIFICATION: Initialize mouse tracking ---
+        this.initMouseTracking();
+        // --- END MODIFICATION ---
     }
-
-    /**
-     * Clear all canvases
-     * @private
-     */
+    
+    
     clearCanvases() {
         // Clear disk canvas
         this.diskCtx.fillStyle = this.colors.background;
@@ -59,11 +69,7 @@ class CanvasRenderer {
         this.updateHeadTrackerPosition();
     }
 
-    /**
-     * --- NEW FUNCTION ---
-     * Update the position of the HTML-based head tracker
-     * to match the canvas-drawn head.
-     */
+    
     updateHeadTrackerPosition() {
         if (!this.headTrackerElement) return;
 
@@ -101,6 +107,10 @@ class CanvasRenderer {
         const height = this.diskHeight;
         const x = this.diskPadding;
         const y = 30; // Top padding for the head pointer
+        
+        // --- MODIFICATION: Store disk rect for mouse tracking ---
+        this.diskRect = { x, y, width, height };
+        // --- END MODIFICATION ---
 
         // Draw disk bar
         this.drawDiskBar(ctx, x, y, width, height);
@@ -126,10 +136,7 @@ class CanvasRenderer {
         // --- END MODIFICATION ---
     }
 
-    /**
-     * Draw the disk representation
-     * @private
-     */
+    
     drawDiskBar(ctx, x, y, width, height) {
         // Disk background
         ctx.fillStyle = this.colors.disk;
@@ -141,10 +148,7 @@ class CanvasRenderer {
         ctx.strokeRect(x, y, width, height);
     }
 
-    /**
-     * Draw grid lines on disk
-     * @private
-     */
+    
     drawGridLines(ctx, x, y, width, height) {
         ctx.strokeStyle = this.colors.gridLine;
         ctx.lineWidth = 1;
@@ -165,8 +169,17 @@ class CanvasRenderer {
      */
     drawRequestDots(ctx, x, y, width, height) {
         const cy = y + height / 2;
-        const dotRadius = 6;
+        // --- MODIFICATION: Use class property for radius ---
+        const dotRadius = this.dotRadius;
+        // --- END MODIFICATION ---
         const maxTrack = this.state.maxTrackNumber > 0 ? this.state.maxTrackNumber : 1;
+
+        // --- MODIFICATION: Text drawing removed ---
+        // ctx.fillStyle = this.colors.text;
+        // ctx.font = 'bold 12px Arial';
+        // ctx.textAlign = 'center';
+        // const textYOffset = cy - dotRadius - 5; 
+        // --- END MODIFICATION ---
 
         // Draw pending requests
         this.state.pendingRequests.forEach(pos => {
@@ -180,6 +193,11 @@ class CanvasRenderer {
             ctx.strokeStyle = this.colors.border;
             ctx.lineWidth = 1;
             ctx.stroke();
+
+            // --- MODIFICATION: Text drawing removed ---
+            // ctx.fillStyle = this.colors.text;
+            // ctx.fillText(pos, cx, textYOffset); 
+            // --- END MODIFICATION ---
         });
 
         // Draw serviced requests
@@ -190,21 +208,24 @@ class CanvasRenderer {
             ctx.arc(cx, cy, dotRadius, 0, Math.PI * 2);
             ctx.fill();
 
-            // Draw checkmark
-            ctx.strokeStyle = this.colors.background;
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(cx - 2, cy);
-            ctx.lineTo(cx - 1, cy + 2);
-            ctx.lineTo(cx + 3, cy - 2);
-            ctx.stroke();
+            // --- MODIFICATION: Text drawing removed ---
+            // ctx.fillStyle = this.colors.text;
+            // ctx.fillText(pos, cx, textYOffset);
+            // --- END MODIFICATION ---
+
+            // --- MODIFICATION: Checkmark drawing removed ---
+            // ctx.strokeStyle = this.colors.background;
+            // ctx.lineWidth = 2;
+            // ctx.beginPath();
+            // ctx.moveTo(cx - 2, cy);
+            // ctx.lineTo(cx - 1, cy + 2);
+            // ctx.lineTo(cx + 3, cy - 2);
+            // ctx.stroke();
+            // --- END MODIFICATION ---
         });
     }
 
-    /**
-     * Draw trace line showing head movement (This function is no longer called)
-     * @private
-     */
+    
     drawTraceLine(ctx, x, y, width, height) {
         if (this.traceHistory.length < 2) return;
 
@@ -228,15 +249,9 @@ class CanvasRenderer {
             ctx.lineTo(xPos, cy + 15);
             ctx.lineTo(xPos, cy);
         }
-
-        ctx.stroke();
-        ctx.setLineDash([]);
     }
 
-    /**
-     * Draw head pointer
-     * @private
-     */
+    
     drawHeadPointer(ctx, x, y, width, height) {
         const cy = y + height / 2;
         const maxTrack = this.state.maxTrackNumber > 0 ? this.state.maxTrackNumber : 1;
@@ -270,10 +285,7 @@ class CanvasRenderer {
 
     }
 
-    /**
-     * Draw axis labels
-     * @private
-     */
+    
     drawAxisLabels(ctx, x, y, width, height) {
         ctx.fillStyle = this.colors.text;
         ctx.font = '12px Arial';
@@ -294,10 +306,7 @@ class CanvasRenderer {
         ctx.restore();
     }
 
-    /**
-     * Draw legend (This function is no longer called)
-     * @private
-     */
+    
     drawLegend(ctx) {
         const legendY = this.diskCanvas.height - 20;
         const legendX = this.diskPadding;
@@ -335,12 +344,12 @@ class CanvasRenderer {
         ctx.fillText('Head', legendX + itemSpacing * 2 + 12, legendY + 3);
     }
 
+
     /**
      * Render position vs. time graph (Time on Y-axis, Position on X-axis)
      * @private
      */
     renderPositionGraph() {
-        // ... (rest of the file is unchanged) ...
         const ctx = this.graphCtx;
         const width = this.graphCanvas.width - 2 * this.graphPadding;
         const height = this.graphCanvas.height - 2 * this.graphPadding;
@@ -574,6 +583,64 @@ class CanvasRenderer {
         // Re-render after resize
         this.render();
     }
+    
+    // --- MODIFICATION: New function to handle mouse tracking ---
+    /**
+     * Initialize mouse tracking for canvas tooltips
+     * @private
+     */
+    initMouseTracking() {
+        if (!this.tooltipElement) return;
+
+        this.diskCanvas.addEventListener('mousemove', (e) => {
+            const rect = this.diskCanvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const { x, y, width, height } = this.diskRect;
+            const cy = y + height / 2;
+            const maxTrack = this.state.maxTrackNumber > 0 ? this.state.maxTrackNumber : 1;
+            const dotRadius = this.dotRadius;
+
+            let foundDot = null;
+
+            // Check pending requests
+            for (const pos of this.state.pendingRequests) {
+                const cx = x + (pos / maxTrack) * width;
+                const dist = Math.sqrt(Math.pow(mouseX - cx, 2) + Math.pow(mouseY - cy, 2));
+                if (dist <= dotRadius) {
+                    foundDot = pos;
+                    break;
+                }
+            }
+
+            // Check serviced requests if not found yet
+            if (!foundDot) {
+                for (const pos of this.state.servicedRequests) {
+                    const cx = x + (pos / maxTrack) * width;
+                    const dist = Math.sqrt(Math.pow(mouseX - cx, 2) + Math.pow(mouseY - cy, 2));
+                    if (dist <= dotRadius) {
+                        foundDot = pos;
+                        break;
+                    }
+                }
+            }
+            
+            if (foundDot !== null) {
+                this.tooltipElement.innerHTML = `Track: <strong>${foundDot}</strong>`;
+                this.tooltipElement.style.left = `${e.pageX + 10}px`; // Position near mouse
+                this.tooltipElement.style.top = `${e.pageY - 28}px`; // Position near mouse
+                this.tooltipElement.style.display = 'block';
+            } else {
+                this.tooltipElement.style.display = 'none';
+            }
+        });
+
+        this.diskCanvas.addEventListener('mouseout', () => {
+            this.tooltipElement.style.display = 'none';
+        });
+    }
+    // --- END MODIFICATION ---
 }
 
 // Export for use in other modules
