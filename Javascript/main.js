@@ -1,6 +1,6 @@
 /* =====================================================
-   JS/MAIN.JS - APPLICATION ENTRY POINT
-   ===================================================== */
+ * JS/MAIN.JS - APPLICATION ENTRY POINT
+ * ===================================================== */
 
 /**
  * Initialize and start the application
@@ -10,19 +10,35 @@ function initializeApp() {
     try {
         console.log('🚀 Initializing OS Disk Scheduling Simulator...');
 
-        // 1. Create State Manager
+        // 1. Get UI Panel Elements
+        const configPanel = document.getElementById('config-panel');
+        const simulationPanel = document.getElementById('simulation-panel');
+
+        // --- UI View-Switching Functions ---
+        function showSimulationView() {
+            configPanel.style.display = 'none';
+            simulationPanel.style.display = 'block';
+        }
+
+        function showConfigView() {
+            simulationPanel.style.display = 'none';
+            configPanel.style.display = 'block';
+        }
+
+        // 2. Create State Manager
         const stateManager = new StateManager();
         console.log('✓ State Manager created');
 
-        // 2. Create Canvas Renderer
+        // 3. Create Canvas Renderer
         const canvasRenderer = new CanvasRenderer('diskCanvas', 'graphCanvas', stateManager);
         console.log('✓ Canvas Renderer created');
 
-        // 3. Create Controller
-        const controller = new Controller(stateManager, canvasRenderer);
+        // 4. Create Controller
+        // Pass the view-switching functions to the controller
+        const controller = new Controller(stateManager, canvasRenderer, showSimulationView, showConfigView);
         console.log('✓ Controller created');
 
-        // 4. Register all algorithms
+        // 5. Register all algorithms
         controller.registerAlgorithm('fcfs', FCFS);
         controller.registerAlgorithm('sstf', SSTF);
         controller.registerAlgorithm('scan', SCAN);
@@ -31,19 +47,52 @@ function initializeApp() {
         controller.registerAlgorithm('clook', CLOOK);
         console.log('✓ All algorithms registered');
 
-        // 5. Initialize controller
+        // 6. Initialize controller (this sets up its internal listeners)
         controller.init();
         console.log('✓ Controller initialized');
 
-        // 6. Handle initial canvas sizing
+        // 7. --- Setup Main UI Event Listeners (Moved from index.html) ---
+
+        // Listener for the FIRST "Run Simulation" button
+        document.getElementById('runBtn').addEventListener('click', () => {
+            controller.handleRunSimulation();
+        });
+
+        // Listener for the "Reset Algorithm" button
+        document.getElementById('resetAlgorithmBtn').addEventListener('click', () => {
+            controller.handleFullReset();
+        });
+
+        // Listener for the Direction Group (SCAN/LOOK)
+        const algorithmSelect = document.getElementById('algorithmSelect');
+        const directionGroup = document.getElementById('directionGroup');
+        const scanAlgos = ['scan', 'cscan', 'look', 'clook'];
+
+        const toggleDirectionGroup = () => {
+            if (scanAlgos.includes(algorithmSelect.value)) {
+                directionGroup.style.display = 'flex';
+            } else {
+                directionGroup.style.display = 'none';
+            }
+        };
+        algorithmSelect.addEventListener('change', () => {
+            toggleDirectionGroup();
+            // Also regenerate simulation on algorithm change
+            controller.handleAlgorithmChange();
+        });
+        // Call it once on load
+        toggleDirectionGroup();
+
+
+        // 8. Handle initial canvas sizing
         canvasRenderer.handleResize();
         console.log('✓ Canvas resized');
 
-        // 7. Generate initial simulation
+        // 9. Generate initial simulation (but don't switch view)
         controller.generateSimulation();
         console.log('✓ Initial simulation generated');
 
-        // 8. Update UI
+        // 10. Update UI
         controller.updateAllUI();
         console.log('✓ UI updated');
 
@@ -51,7 +100,12 @@ function initializeApp() {
 
     } catch (error) {
         console.error('❌ Error initializing application:', error);
-        alert('Error initializing application: ' + error.message);
+        // Use a less intrusive error display
+        const errorEl = document.getElementById('currentActionText');
+        if (errorEl) {
+            errorEl.textContent = 'Error initializing application: ' + error.message;
+            errorEl.style.color = 'red';
+        }
     }
 }
 

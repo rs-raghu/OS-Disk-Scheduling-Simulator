@@ -1,6 +1,6 @@
 /* =====================================================
-   JS/STATE-MANAGER.JS - CENTRALIZED STATE MANAGEMENT
-   ===================================================== */
+ * JS/STATE-MANAGER.JS - CENTRALIZED STATE MANAGEMENT
+ * ===================================================== */
 
 class StateManager {
     constructor() {
@@ -8,7 +8,7 @@ class StateManager {
         this.algorithm = 'fcfs';
         this.initialHeadPosition = 53;
         this.maxTrackNumber = 199;
-        this.requestQueue = [];
+        this.requestQueue = [98, 183, 37, 122, 14, 124, 65, 67]; // Default queue
         this.direction = 'low'; // 'low' or 'high' for SCAN/LOOK
         
         // Current Simulation State
@@ -17,17 +17,20 @@ class StateManager {
         this.isRunning = false;
         this.animationSpeed = 5; // 1-10 scale
         
-        // Execution Statistics
+        // Execution Statistics (reset by resetSimulation)
         this.totalHeadMovement = 0;
         this.seeksCount = 0;
         this.averageSeekTime = 0;
-        this.currentHeadPosition = 0;
+        this.currentHeadPosition = 53;
         this.pendingRequests = [];
         this.servicedRequests = [];
         this.nextTarget = null;
         
         // UI State
         this.isInitialized = false;
+
+        // Initialize with default values
+        this.resetSimulation();
     }
 
     /**
@@ -41,6 +44,7 @@ class StateManager {
         this.requestQueue = this.parseRequestQueue(params.requestQueue) || [];
         this.direction = params.direction || 'low';
         
+        // Reset simulation with these new base parameters
         this.resetSimulation();
         this.isInitialized = true;
     }
@@ -55,22 +59,28 @@ class StateManager {
             return [];
         }
 
-        return queueString
+        const maxTrack = this.maxTrackNumber; // Use current maxTrack for validation
+        const requests = queueString
             .split(',')
             .map(str => {
                 const num = parseInt(str.trim());
                 return !isNaN(num) ? num : null;
             })
-            .filter(num => num !== null && num >= 0 && num <= this.maxTrackNumber);
+            .filter(num => num !== null && num >= 0 && num <= maxTrack);
+        
+        // Remove duplicates
+        return [...new Set(requests)];
     }
 
     /**
-     * Reset simulation to initial state
+     * Reset simulation to initial parameter state
      */
     resetSimulation() {
         this.allSteps = [];
         this.currentStepIndex = 0;
         this.isRunning = false;
+        
+        // Reset statistics based on initial params
         this.totalHeadMovement = 0;
         this.seeksCount = 0;
         this.averageSeekTime = 0;
@@ -78,6 +88,9 @@ class StateManager {
         this.pendingRequests = [...this.requestQueue];
         this.servicedRequests = [];
         this.nextTarget = this.pendingRequests.length > 0 ? this.pendingRequests[0] : null;
+
+        // Create a default initial step
+        this.allSteps = [this.createInitialStep()];
     }
 
     /**
@@ -85,7 +98,8 @@ class StateManager {
      * @param {Function} algorithmClass - Algorithm class to use
      */
     generateSequence(algorithmClass) {
-        this.resetSimulation();
+        // Start from a clean slate based on current params
+        this.resetSimulation(); 
         
         try {
             // Create algorithm instance
@@ -106,11 +120,21 @@ class StateManager {
             if (this.allSteps.length === 0) {
                 this.allSteps = [this.createInitialStep()];
             }
-
+            
+            // Set first step's nextTarget correctly
+            if (this.allSteps.length > 1) {
+                this.allSteps[0].nextTarget = this.allSteps[1].headPosition;
+            } else {
+                this.allSteps[0].nextTarget = null;
+            }
+            
+            this.updateStatistics(); // Update state to step 0
             return this.allSteps;
+
         } catch (error) {
             console.error('Error generating sequence:', error);
-            this.allSteps = [this.createInitialStep()];
+            this.allSteps = [this.createInitialStep()]; // Reset to initial
+            this.updateStatistics();
             return this.allSteps;
         }
     }
@@ -130,12 +154,12 @@ class StateManager {
         steps.push({
             step: 0,
             headPosition: this.initialHeadPosition,
-            nextTarget: pendingQueue.length > 0 ? pendingQueue[0] : null,
+            nextTarget: null, // Will be set after sequence generation
             totalHeadMovement: 0,
             seekDistance: 0,
             pendingQueue: [...pendingQueue],
             servicedQueue: [],
-            currentAction: `Starting at position ${this.initialHeadPosition}. Pending requests: ${pendingQueue.length}`
+            currentAction: `Starting at position ${this.initialHeadPosition}. ${pendingQueue.length} pending requests.`
         });
 
         // Generate steps for each movement
@@ -146,16 +170,15 @@ class StateManager {
             totalMovement += seekDistance;
 
             // Check if this request was just serviced
+            let servicedThisStep = false;
             if (pendingQueue.includes(currentPos)) {
+                servicedThisStep = true;
                 servicedQueue.push(currentPos);
                 pendingQueue = pendingQueue.filter(req => req !== currentPos);
             }
 
             // Determine next target
-            let nextTarget = null;
-            if (pendingQueue.length > 0) {
-                nextTarget = i + 1 < sequence.length ? sequence[i + 1] : pendingQueue[0];
-            }
+            const nextTarget = (i + 1 < sequence.length) ? sequence[i + 1] : null;
 
             steps.push({
                 step: i,
@@ -165,7 +188,7 @@ class StateManager {
                 seekDistance: seekDistance,
                 pendingQueue: [...pendingQueue],
                 servicedQueue: [...servicedQueue],
-                currentAction: this.generateActionText(previousPos, currentPos, seekDistance, pendingQueue)
+                currentAction: this.generateActionText(previousPos, currentPos, seekDistance, pendingQueue, servicedThisStep)
             });
         }
 
@@ -176,10 +199,10 @@ class StateManager {
      * Generate descriptive action text for current step
      * @private
      */
-    generateActionText(fromPos, toPos, seekDistance, pendingQueue) {
-        const serviced = this.requestQueue.includes(toPos) ? ' ✓ Serviced!' : '';
-        const pending = pendingQueue.length > 0 ? `${pendingQueue.length} pending` : 'All serviced!';
-        return `Moving from ${fromPos} → ${toPos} (Seek: ${seekDistance})${serviced} | ${pending}`;
+    generateActionText(fromPos, toPos, seekDistance, pendingQueue, serviced) {
+        const servicedText = serviced ? ' ✓ Serviced!' : '';
+        const pendingText = pendingQueue.length > 0 ? `${pendingQueue.length} pending` : 'All requests serviced!';
+        return `Moving from ${fromPos} → ${toPos} (Seek: ${seekDistance})${servicedText} | ${pendingText}`;
     }
 
     /**
@@ -187,15 +210,16 @@ class StateManager {
      * @private
      */
     createInitialStep() {
+        const pending = [...this.requestQueue];
         return {
             step: 0,
             headPosition: this.initialHeadPosition,
-            nextTarget: this.pendingRequests.length > 0 ? this.pendingRequests[0] : null,
+            nextTarget: pending.length > 0 ? pending[0] : null, // Best guess
             totalHeadMovement: 0,
             seekDistance: 0,
-            pendingQueue: [...this.pendingRequests],
+            pendingQueue: pending,
             servicedQueue: [],
-            currentAction: `Ready to start. Head at position ${this.initialHeadPosition}`
+            currentAction: `Ready to start. Head at ${this.initialHeadPosition}. ${pending.length} pending.`
         };
     }
 
@@ -204,7 +228,7 @@ class StateManager {
      * @returns {Object} Current step state
      */
     getCurrentStep() {
-        if (this.allSteps.length === 0) {
+        if (!this.allSteps || this.allSteps.length === 0) {
             return this.createInitialStep();
         }
         return this.allSteps[Math.min(this.currentStepIndex, this.allSteps.length - 1)];
@@ -259,11 +283,11 @@ class StateManager {
         this.nextTarget = currentStep.nextTarget;
         
         // Calculate average seek time
-        if (currentStep.step > 0) {
-            this.seeksCount = currentStep.step;
+        // Use (step) as number of seeks, which is correct
+        this.seeksCount = currentStep.step;
+        if (this.seeksCount > 0) {
             this.averageSeekTime = this.totalHeadMovement / this.seeksCount;
         } else {
-            this.seeksCount = 0;
             this.averageSeekTime = 0;
         }
     }
@@ -273,7 +297,7 @@ class StateManager {
      * @returns {boolean}
      */
     isComplete() {
-        return this.currentStepIndex === this.allSteps.length - 1 && this.pendingRequests.length === 0;
+        return this.currentStepIndex === this.allSteps.length - 1;
     }
 
     /**
@@ -289,7 +313,7 @@ class StateManager {
      * @returns {number} Progress from 0-100
      */
     getProgress() {
-        if (this.allSteps.length === 0) return 0;
+        if (!this.allSteps || this.allSteps.length <= 1) return 0;
         return Math.round((this.currentStepIndex / (this.allSteps.length - 1)) * 100);
     }
 
@@ -298,6 +322,9 @@ class StateManager {
      * @returns {Object} Complete simulation data
      */
     getExportData() {
+        // Update stats to final step before exporting
+        this.jumpToStep(this.allSteps.length - 1);
+        
         return {
             algorithm: this.algorithm,
             initialHeadPosition: this.initialHeadPosition,
@@ -325,9 +352,10 @@ class StateManager {
      * @returns {number} Delay in ms
      */
     getAnimationDelay() {
-        // Higher speed = shorter delay
-        // Speed 1 = 1000ms, Speed 10 = 100ms
-        return (1000 / this.animationSpeed);
+        // Maps speed 1 (slow) to 1000ms
+        // Maps speed 10 (fast) to 100ms
+        // (11 - speed) * 100 would map 1->1000, 10->100
+        return (11 - this.animationSpeed) * 100;
     }
 
     /**
@@ -359,7 +387,9 @@ class StateManager {
      * @returns {string} Step information
      */
     getStepInfo() {
-        return `${this.currentStepIndex} / ${this.allSteps.length}`;
+        // Use allSteps.length - 1 as the max step number
+        const totalSteps = this.allSteps.length > 0 ? this.allSteps.length - 1 : 0;
+        return `${this.currentStepIndex} / ${totalSteps}`;
     }
 
     /**
@@ -370,16 +400,22 @@ class StateManager {
         const errors = [];
 
         if (this.requestQueue.length === 0) {
-            errors.push('Request queue cannot be empty');
+            errors.push('Request queue cannot be empty.');
         }
 
         if (this.initialHeadPosition < 0 || this.initialHeadPosition > this.maxTrackNumber) {
-            errors.push(`Initial head position must be between 0 and ${this.maxTrackNumber}`);
+            errors.push(`Initial head position must be between 0 and ${this.maxTrackNumber}.`);
         }
 
         if (this.maxTrackNumber < 10) {
-            errors.push('Max track number must be at least 10');
+            errors.push('Max track number must be at least 10.');
         }
+        
+        // Check if all requests are within bounds (should be handled by parseRequestQueue, but good to double-check)
+        if (this.requestQueue.some(req => req > this.maxTrackNumber || req < 0)) {
+            errors.push('One or more requests are outside the Max Track boundary.');
+        }
+
 
         return {
             valid: errors.length === 0,

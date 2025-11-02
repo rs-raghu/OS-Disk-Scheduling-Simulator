@@ -1,14 +1,22 @@
 /* =====================================================
-   JS/CONTROLLER.JS - APPLICATION CONTROLLER
-   ===================================================== */
+ * JS/CONTROLLER.JS - APPLICATION CONTROLLER
+ * ===================================================== */
 
 class Controller {
-    constructor(stateManager, canvasRenderer) {
+    constructor(stateManager, canvasRenderer, showSimulationView, showConfigView) {
         this.state = stateManager;
         this.renderer = canvasRenderer;
         this.algorithms = new Map();
         this.animationInterval = null;
-        this.isAnimating = false;
+        
+        // --- NEW: UI View-Switching Functions ---
+        // These are passed in from main.js
+        this.showSimulationView = showSimulationView;
+        this.showConfigView = showConfigView;
+
+        // --- NEW: Button Element Cache ---
+        // We cache these elements for performance
+        this.ui = {};
     }
 
     /**
@@ -24,8 +32,17 @@ class Controller {
      * Initialize the application
      */
     init() {
+        // --- NEW: Cache all UI elements ---
+        this.ui.playPauseBtn = document.getElementById('playPauseBtn');
+        this.ui.stepForwardBtn = document.getElementById('stepForwardBtn');
+        this.ui.stepBackwardBtn = document.getElementById('stepBackwardBtn');
+        this.ui.resetBtn = document.getElementById('resetBtn');
+        this.ui.exportBtn = document.getElementById('exportBtn');
+        this.ui.algorithmSelect = document.getElementById('algorithmSelect');
+        this.ui.speedSlider = document.getElementById('speedSlider');
+
+        // Setup event listeners for the SIMULATION PANEL
         this.setupEventListeners();
-        this.loadInitialState();
     }
 
     /**
@@ -33,34 +50,60 @@ class Controller {
      * @private
      */
     setupEventListeners() {
-        // Control buttons
-        document.getElementById('runBtn').addEventListener('click', () => this.toggleRunPause());
-        document.getElementById('stepForwardBtn').addEventListener('click', () => this.handleStepForward());
-        document.getElementById('stepBackwardBtn').addEventListener('click', () => this.handleStepBackward());
-        document.getElementById('resetBtn').addEventListener('click', () => this.handleReset());
-        document.getElementById('exportBtn').addEventListener('click', () => this.handleExport());
+        // --- UPDATED: Listen to the NEW buttons ---
+        this.ui.playPauseBtn.addEventListener('click', () => this.toggleRunPause());
+        this.ui.stepForwardBtn.addEventListener('click', () => this.handleStepForward());
+        this.ui.stepBackwardBtn.addEventListener('click', () => this.handleStepBackward());
+        
+        // This button now just resets the animation to step 0
+        this.ui.resetBtn.addEventListener('click', () => this.handleResetAnimation());
+        
+        this.ui.exportBtn.addEventListener('click', () => this.handleExport());
 
-        // Parameter inputs
-        document.getElementById('algorithmSelect').addEventListener('change', () => this.handleAlgorithmChange());
-        document.getElementById('speedSlider').addEventListener('input', (e) => this.handleSpeedChange(e));
+        // Parameter inputs (algorithm select is in main.js)
+        this.ui.speedSlider.addEventListener('input', (e) => this.handleSpeedChange(e));
 
         // Window resize
         window.addEventListener('resize', () => this.renderer.handleResize());
     }
 
     /**
-     * Load initial state and render
-     * @private
+     * --- NEW: Called by main.js when "Run Simulation" is clicked ---
      */
-    loadInitialState() {
-        this.generateSimulation();
+    handleRunSimulation() {
+        console.log('Handle Run Simulation');
+        const success = this.generateSimulation();
+        if (success) {
+            // Only switch views if generation was successful
+            this.showSimulationView();
+            // Start the animation immediately
+            this.toggleRunPause(true); // Force play
+        }
     }
+
+    /**
+     * --- NEW: Called by main.js when "Reset Algorithm" is clicked ---
+     */
+    handleFullReset() {
+        console.log('Handle Full Reset');
+        this.stopAnimation();
+        this.state.resetSimulation(); // Resets state to defaults
+        
+        // We need to re-generate the (empty) initial state
+        this.generateSimulation(); 
+        
+        this.updateAllUI();
+        this.showConfigView(); // Switch back to config panel
+    }
+
 
     /**
      * Generate simulation with current parameters
      */
     generateSimulation() {
         try {
+            this.stopAnimation(); // Stop any running animation
+
             // Get parameters from DOM
             const params = this.getParametersFromDOM();
 
@@ -69,8 +112,9 @@ class Controller {
             const validation = this.state.validateParameters();
 
             if (!validation.valid) {
-                alert('Error: ' + validation.errors.join('\n'));
-                return;
+                // Use a non-blocking alert
+                this.showError('Error: ' + validation.errors.join('\n'));
+                return false; // Indicate failure
             }
 
             // Get algorithm class
@@ -86,9 +130,13 @@ class Controller {
 
             // Update UI
             this.updateAllUI();
+            this.updateAlgorithmDescription();
+            return true; // Indicate success
+
         } catch (error) {
             console.error('Error generating simulation:', error);
-            alert('Error: ' + error.message);
+            this.showError('Error: ' + error.message);
+            return false; // Indicate failure
         }
     }
 
@@ -108,23 +156,28 @@ class Controller {
 
     /**
      * Toggle run/pause animation
+     * @param {boolean} [forcePlay] - Optional flag to force play
      */
-    toggleRunPause() {
+    toggleRunPause(forcePlay = null) {
         if (this.state.isComplete()) {
-            this.handleReset();
+            this.handleResetAnimation();
             return;
         }
 
-        const isRunning = this.state.toggleRunning();
-        const btn = document.getElementById('runBtn');
+        // Determine new state
+        const shouldBeRunning = forcePlay !== null ? forcePlay : !this.state.isRunning;
 
-        if (isRunning) {
-            btn.textContent = '⏸ Pause';
-            btn.classList.add('active');
+        if (shouldBeRunning) {
+            this.state.resume();
+            // --- UPDATED: Target new button ---
+            this.ui.playPauseBtn.innerHTML = '<span class="btn-icon">⏸️</span><span class="btn-text">Pause</span>';
+            this.ui.playPauseBtn.classList.add('active');
             this.startAnimation();
         } else {
-            btn.textContent = '▶ Run';
-            btn.classList.remove('active');
+            this.state.pause();
+            // --- UPDATED: Target new button ---
+            this.ui.playPauseBtn.innerHTML = '<span class="btn-icon">▶️</span><span class="btn-text">Play</span>';
+            this.ui.playPauseBtn.classList.remove('active');
             this.stopAnimation();
         }
     }
@@ -138,17 +191,23 @@ class Controller {
             clearInterval(this.animationInterval);
         }
 
+        // Re-calculate delay every time, in case speed changed
+        const delay = this.state.getAnimationDelay();
+
         this.animationInterval = setInterval(() => {
             if (!this.state.nextStep()) {
+                // --- Animation finished ---
                 this.stopAnimation();
-                document.getElementById('runBtn').textContent = '▶ Run';
-                document.getElementById('runBtn').classList.remove('active');
                 this.state.pause();
+                // --- UPDATED: Target new button ---
+                this.ui.playPauseBtn.innerHTML = '<span class="btn-icon">🔄</span><span class="btn-text">Replay</span>';
+                this.ui.playPauseBtn.classList.remove('active');
+            } else {
+                 // Normal step
+                this.renderer.updateTraceHistory();
+                this.updateAllUI();
             }
-
-            this.renderer.updateTraceHistory();
-            this.updateAllUI();
-        }, this.state.getAnimationDelay());
+        }, delay);
     }
 
     /**
@@ -160,6 +219,7 @@ class Controller {
             clearInterval(this.animationInterval);
             this.animationInterval = null;
         }
+        this.state.pause(); // Ensure state knows it's paused
     }
 
     /**
@@ -167,9 +227,9 @@ class Controller {
      */
     handleStepForward() {
         this.stopAnimation();
-        this.state.pause();
-        document.getElementById('runBtn').textContent = '▶ Run';
-        document.getElementById('runBtn').classList.remove('active');
+        // --- UPDATED: Target new button ---
+        this.ui.playPauseBtn.innerHTML = '<span class="btn-icon">▶️</span><span class="btn-text">Play</span>';
+        this.ui.playPauseBtn.classList.remove('active');
 
         if (this.state.nextStep()) {
             this.renderer.updateTraceHistory();
@@ -182,26 +242,28 @@ class Controller {
      */
     handleStepBackward() {
         this.stopAnimation();
-        this.state.pause();
-        document.getElementById('runBtn').textContent = '▶ Run';
-        document.getElementById('runBtn').classList.remove('active');
+        // --- UPDATED: Target new button ---
+        this.ui.playPauseBtn.innerHTML = '<span class="btn-icon">▶️</span><span class="btn-text">Play</span>';
+        this.ui.playPauseBtn.classList.remove('active');
 
         if (this.state.previousStep()) {
+            this.renderer.updateTraceHistory(); // Need to update trace history on backward too
             this.updateAllUI();
         }
     }
 
     /**
-     * Handle reset button
+     * Handle reset button (Resets animation to step 0)
      */
-    handleReset() {
+    handleResetAnimation() {
         this.stopAnimation();
-        this.state.resetSimulation();
+        this.state.jumpToStep(0); // Go to step 0, don't regenerate
         this.renderer.resetTrace();
         this.renderer.updateTraceHistory();
 
-        document.getElementById('runBtn').textContent = '▶ Run';
-        document.getElementById('runBtn').classList.remove('active');
+        // --- UPDATED: Target new button ---
+        this.ui.playPauseBtn.innerHTML = '<span class="btn-icon">▶️</span><span class="btn-text">Play</span>';
+        this.ui.playPauseBtn.classList.remove('active');
 
         this.updateAllUI();
     }
@@ -210,6 +272,8 @@ class Controller {
      * Handle algorithm change
      */
     handleAlgorithmChange() {
+        // This is now called from main.js
+        // It will regenerate the simulation but NOT switch views
         this.generateSimulation();
     }
 
@@ -219,18 +283,32 @@ class Controller {
     handleSpeedChange(event) {
         const speed = parseInt(event.target.value);
         this.state.setAnimationSpeed(speed);
+
+        // If currently animating, restart interval with new speed
+        if (this.state.isRunning) {
+            this.startAnimation();
+        }
     }
 
     /**
      * Handle export to PDF
      */
     handleExport() {
+        // Stop animation to get a clean screenshot
+        const wasRunning = this.state.isRunning;
+        this.stopAnimation();
+
         try {
             const exportData = this.state.getExportData();
             this.generatePDF(exportData);
         } catch (error) {
             console.error('Error exporting PDF:', error);
-            alert('Error: ' + error.message);
+            this.showError('Error: ' + error.message);
+        }
+
+        // Resume animation if it was running
+        if (wasRunning) {
+            this.startAnimation();
         }
     }
 
@@ -238,92 +316,137 @@ class Controller {
      * Generate PDF report
      * @private
      */
-    generatePDF(exportData) {
+    async generatePDF(exportData) {
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        // Use A4 portrait, units in 'pt' for better control
+        const doc = new jsPDF('p', 'pt', 'a4');
+        const margin = 40;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const contentWidth = pageWidth - margin * 2;
+        let yPos = margin;
 
-        // Add title
+        // --- Title ---
         doc.setFontSize(20);
-        doc.text('Disk Scheduling Report', 20, 20);
+        doc.setFont(undefined, 'bold');
+        doc.text('Disk Scheduling Report', pageWidth / 2, yPos, { align: 'center' });
+        yPos += 20;
 
-        // Add timestamp
+        // --- Timestamp ---
         doc.setFontSize(10);
-        doc.text(`Generated: ${exportData.timestamp}`, 20, 30);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(100);
+        doc.text(`Generated: ${exportData.timestamp}`, pageWidth / 2, yPos, { align: 'center' });
+        yPos += 30;
 
-        // Add parameters section
+        // --- Parameters ---
         doc.setFontSize(14);
-        doc.text('Parameters', 20, 45);
-        doc.setFontSize(11);
-        let yPos = 55;
-        doc.text(`Algorithm: ${exportData.algorithm.toUpperCase()}`, 20, yPos);
-        yPos += 8;
-        doc.text(`Initial Head Position: ${exportData.initialHeadPosition}`, 20, yPos);
-        yPos += 8;
-        doc.text(`Max Track Number: ${exportData.maxTrackNumber}`, 20, yPos);
-        yPos += 8;
-        doc.text(`Request Queue: ${exportData.requestQueue.join(', ')}`, 20, yPos);
-        yPos += 8;
-        doc.text(`Direction: ${exportData.direction}`, 20, yPos);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(0);
+        doc.text('Parameters', margin, yPos);
+        yPos += 20;
 
-        // Add statistics section
-        yPos += 15;
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Algorithm: ${exportData.algorithm.toUpperCase()}`, margin, yPos);
+        yPos += 18;
+        doc.text(`Initial Head Position: ${exportData.initialHeadPosition}`, margin, yPos);
+        yPos += 18;
+        doc.text(`Max Track Number: ${exportData.maxTrackNumber}`, margin, yPos);
+        yPos += 18;
+        if (exportData.direction) {
+             doc.text(`Direction: ${exportData.direction}`, margin, yPos);
+             yPos += 18;
+        }
+        // Handle long request queues by splitting
+        doc.text('Request Queue:', margin, yPos);
+        yPos += 18;
+        doc.setFontSize(10);
+        doc.setTextColor(80);
+        const queueText = doc.splitTextToSize(exportData.requestQueue.join(', '), contentWidth);
+        doc.text(queueText, margin, yPos);
+        yPos += (queueText.length * 12) + 10; // Add padding
+
+        // --- Results ---
         doc.setFontSize(14);
-        doc.text('Results', 20, yPos);
-        yPos += 10;
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(0);
+        doc.text('Results', margin, yPos);
+        yPos += 20;
+
         doc.setFontSize(11);
-        doc.text(`Total Head Movement: ${exportData.totalHeadMovement}`, 20, yPos);
-        yPos += 8;
-        doc.text(`Average Seek Time: ${exportData.averageSeekTime}`, 20, yPos);
-        yPos += 8;
-        doc.text(`Total Seeks: ${exportData.seeksCount}`, 20, yPos);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Total Head Movement: ${exportData.totalHeadMovement}`, margin, yPos);
+        yPos += 18;
+        doc.text(`Total Seeks: ${exportData.seeksCount}`, margin, yPos);
+        yPos += 18;
+        doc.text(`Average Seek Time: ${exportData.averageSeekTime}`, margin, yPos);
+        yPos += 30;
 
-        // Add canvases as images
-        yPos += 15;
-        doc.setFontSize(12);
-        doc.text('Visualization', 20, yPos);
 
-        yPos += 10;
+        // --- Visuals (using html2canvas) ---
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text('Visuals', margin, yPos);
+        yPos += 20;
+
         try {
-            const diskImage = this.renderer.diskCanvas.toDataURL('image/png');
-            doc.addImage(diskImage, 'PNG', 20, yPos, 170, 40);
-            yPos += 50;
+            const diskCanvas = document.getElementById('diskCanvas');
+            const graphCanvas = document.getElementById('graphCanvas');
+
+            const diskImg = await html2canvas(diskCanvas, { scale: 2 });
+            const graphImg = await html2canvas(graphCanvas, { scale: 2 });
+            
+            const diskImgData = diskImg.toDataURL('image/png');
+            const graphImgData = graphImg.toDataURL('image/png');
+
+            // Calculate aspect ratios
+            const diskRatio = diskImg.height / diskImg.width;
+            const graphRatio = graphImg.height / graphImg.width;
+
+            const imgHeightDisk = contentWidth * diskRatio;
+            const imgHeightGraph = contentWidth * graphRatio;
+            
+            doc.text('Disk Trace:', margin, yPos);
+            yPos += 15;
+            doc.addImage(diskImgData, 'PNG', margin, yPos, contentWidth, imgHeightDisk);
+            yPos += imgHeightDisk + 20;
+
+            doc.text('Position vs. Time Graph:', margin, yPos);
+            yPos += 15;
+            doc.addImage(graphImgData, 'PNG', margin, yPos, contentWidth, imgHeightGraph);
+            yPos += imgHeightGraph + 20;
+
         } catch (e) {
-            console.error('Error adding disk canvas:', e);
+            console.error('Error adding canvas images:', e);
+            doc.setTextColor(255, 0, 0);
+            doc.text('Error rendering canvas images.', margin, yPos);
+            yPos += 20;
         }
 
-        doc.text('Position vs. Time Graph', 20, yPos);
-        yPos += 8;
-        try {
-            const graphImage = this.renderer.graphCanvas.toDataURL('image/png');
-            doc.addImage(graphImage, 'PNG', 20, yPos, 170, 80);
-            yPos += 90;
-        } catch (e) {
-            console.error('Error adding graph canvas:', e);
-        }
-
-        // Add execution trace on new page
+        // --- Execution Trace ---
         doc.addPage();
+        yPos = margin;
         doc.setFontSize(14);
-        doc.text('Execution Trace', 20, 20);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(0);
+        doc.text('Execution Trace', margin, yPos);
+        yPos += 20;
 
-        yPos = 30;
         doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
 
-        // Add steps
-        for (let i = 0; i < Math.min(exportData.allSteps.length, 100); i++) {
-            const step = exportData.allSteps[i];
-            const text = `Step ${step.step}: Head at ${step.headPosition}, Movement: ${step.totalHeadMovement}, Serviced: ${step.servicedQueue.length}`;
+        for (const step of exportData.allSteps) {
+            const text = `Step ${step.step}: Head at ${step.headPosition}, Seek: ${step.seekDistance}, Total Move: ${step.totalHeadMovement}, Serviced: [${step.servicedQueue.join(', ')}]`;
 
-            if (yPos > 280) {
+            if (yPos > doc.internal.pageSize.getHeight() - margin) {
                 doc.addPage();
-                yPos = 20;
+                yPos = margin;
             }
-
-            doc.text(text, 20, yPos);
-            yPos += 6;
+            doc.text(text, margin, yPos);
+            yPos += 15;
         }
 
-        // Save PDF
+        // --- Save PDF ---
         doc.save(`disk-scheduling-${exportData.algorithm}.pdf`);
     }
 
@@ -394,7 +517,9 @@ class Controller {
      */
     updateActionText() {
         const currentStep = this.state.getCurrentStep();
-        document.getElementById('currentActionText').textContent = currentStep.currentAction;
+        if (currentStep) {
+            document.getElementById('currentActionText').textContent = currentStep.currentAction;
+        }
     }
 
     /**
@@ -402,9 +527,23 @@ class Controller {
      */
     updateAlgorithmDescription() {
         const AlgorithmClass = this.algorithms.get(this.state.algorithm);
-        if (AlgorithmClass) {
-            const instance = new AlgorithmClass(0, 100, [1, 2, 3]);
-            document.getElementById('algorithmDescription').textContent = instance.getDescription();
+        if (AlgorithmClass && AlgorithmClass.description) {
+            document.getElementById('algorithmDescription').textContent = AlgorithmClass.description;
+        } else {
+             document.getElementById('algorithmDescription').textContent = "Select an algorithm to begin.";
+        }
+    }
+
+    /**
+     * --- NEW: Show a non-blocking error ---
+     */
+    showError(message) {
+        console.error(message);
+        const errorEl = document.getElementById('currentActionText');
+        if (errorEl) {
+            errorEl.textContent = message;
+            errorEl.style.color = 'red';
+            errorEl.style.fontWeight = 'bold';
         }
     }
 }

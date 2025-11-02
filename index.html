@@ -86,7 +86,7 @@
 
                         <!-- Run Button -->
                         <div class="control-row">
-                            <!-- NOTE: This 'runBtn' ID is likely used by your controller.js to start the simulation -->
+                            <!-- NOTE: This 'runBtn' ID is now handled by main.js -->
                             <button id="runBtn" class="btn btn-primary" title="Run the simulation" style="width: 100%;">
                                 <span class="btn-icon">▶️</span>
                                 <span class="btn-text">Run Simulation</span>
@@ -101,7 +101,7 @@
 
                         <!-- Row 3: Animation Controls -->
                         <div class="control-row button-row">
-                            <!-- This is the new Play/Pause button. Your controller.js will need to find this ID -->
+                            <!-- These buttons are now handled by controller.js -->
                             <button id="playPauseBtn" class="btn btn-primary" title="Play/Pause Animation">
                                 <span class="btn-icon">⏸️</span>
                                 <span class="btn-text">Pause</span>
@@ -117,7 +117,6 @@
                                 <span class="btn-text">Step Forward</span>
                             </button>
 
-                            <!-- This 'resetBtn' ID is likely used by your controller.js to reset the animation to step 0 -->
                             <button id="resetBtn" class="btn btn-secondary" title="Reset Animation to Step 0">
                                 <span class="btn-icon">🔄</span>
                                 <span class="btn-text">Reset Anim</span>
@@ -142,7 +141,7 @@
                             </button>
                         </div>
                         <div class="control-row">
-                            <!-- This new button resets the UI back to State 1 -->
+                            <!-- This new button is handled by main.js -->
                             <button id="resetAlgorithmBtn" class="btn btn-danger" title="Change settings and run a new simulation" style="width: 100%;">
                                 <span class="btn-icon">🛠️</span>
                                 <span class="btn-text">Reset Algorithm</span>
@@ -285,90 +284,9 @@
 
     <!-- 
       MODIFICATION:
-      - Added new script block to handle conditional UI
+      - REMOVED entire script block.
+      - All logic is now handled in main.js and controller.js
     -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // UI State Panels
-            const configPanel = document.getElementById('config-panel');
-            const simulationPanel = document.getElementById('simulation-panel');
-
-            // --- Control Buttons ---
-            // State 1
-            const runBtn = document.getElementById('runBtn');
-            // State 2
-            const resetAlgorithmBtn = document.getElementById('resetAlgorithmBtn');
-            const playPauseBtn = document.getElementById('playPauseBtn'); // The new button
-            
-            // --- Direction Group Logic ---
-            const algorithmSelect = document.getElementById('algorithmSelect');
-            const directionGroup = document.getElementById('directionGroup');
-            const scanAlgos = ['scan', 'cscan', 'look', 'clook'];
-
-            const toggleDirectionGroup = () => {
-                if (scanAlgos.includes(algorithmSelect.value)) {
-                    directionGroup.style.display = 'flex';
-                } else {
-                    directionGroup.style.display = 'none';
-                }
-            };
-            algorithmSelect.addEventListener('change', toggleDirectionGroup);
-
-            // --- UI State Toggling Logic ---
-
-            // This function switches to "Simulation View"
-            // Your controller.js should call this function when the simulation is ready
-            // For now, I'll attach it to the runBtn click for demonstration
-            const showSimulationView = () => {
-                configPanel.style.display = 'none';
-                // *** THIS IS THE FIX ***
-                // Change from 'flex' to 'block'. This will allow the
-                // children elements to stack vertically as intended.
-                simulationPanel.style.display = 'block'; 
-                
-                // Also update the 'runBtn' to 'playPauseBtn'
-                // We'll just manage visibility
-                playPauseBtn.innerHTML = '<span class="btn-icon">⏸️</span><span class="btn-text">Pause</span>';
-            };
-
-            // This function switches back to "Config View"
-            const showConfigView = () => {
-                simulationPanel.style.display = 'none';
-                configPanel.style.display = 'block'; 
-            };
-
-            // --- Event Listeners ---
-            
-            // IMPORTANT: Your controller.js probably already has a listener on 'runBtn'.
-            // You should MOVE this logic inside your controller's 'runBtn' listener.
-            // This is just a placeholder to show how it works.
-            runBtn.addEventListener('click', () => {
-                // Your simulation generation code from controller.js goes here first...
-                // ... then, once the simulation is ready, you call this:
-                showSimulationView();
-            });
-
-            resetAlgorithmBtn.addEventListener('click', () => {
-                // This button should also probably tell your controller to reset everything
-                // before switching the view.
-                showConfigView();
-                // You might also need to clear canvases and reset states here.
-            });
-
-            // Example of play/pause toggle
-            let isPlaying = true;
-            playPauseBtn.addEventListener('click', () => {
-                isPlaying = !isPlaying;
-                if (isPlaying) {
-                    playPauseBtn.innerHTML = '<span class="btn-icon">⏸️</span><span class="btn-text">Pause</span>';
-                    // Add logic from your controller to resume animation
-                } else {
-                    playPauseBtn.innerHTML = '<span class="btn-icon">▶️</span><span class="btn-text">Play</span>';
-                    // Add logic from your controller to pause animation
-                }
-            });
-        });
-    </script>
 
 </body>
 </html>
