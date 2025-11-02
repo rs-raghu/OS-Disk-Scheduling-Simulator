@@ -88,14 +88,23 @@ class Controller {
         console.log('Handle Full Reset');
         this.stopAnimation();
         
-        // We need to re-generate the (empty) initial state
-        // This reads the DOM, which is still set to the old values
-        // We just need to reset the state object
         this.state.initializeWithParams(this.getParametersFromDOM());
         
-        this.updateAllUI();
-        this.renderer.resetTrace(); // Reset trace
-        this.renderer.render(); // Re-render canvas
+        this.updateAllUI(); 
+        this.renderer.resetTrace(); 
+        this.renderer.render(); 
+        
+        // --- MODIFICATION: Manually clear the persistent queues ---
+        const initialContainer = document.getElementById('initialQueue');
+        const servicedContainer = document.getElementById('servicedQueue');
+        if (initialContainer) {
+            initialContainer.innerHTML = '<span class="queue-empty">No simulation run</span>';
+        }
+        if (servicedContainer) {
+            servicedContainer.innerHTML = '<span class="queue-empty">No services yet</span>';
+        }
+        // --- END MODIFICATION ---
+
         this.showConfigView(); // Switch back to config panel
     }
 
@@ -132,8 +141,13 @@ class Controller {
             this.renderer.updateTraceHistory();
 
             // Update UI
-            this.updateAllUI();
+            this.updateAllUI(); // This will now update the serviced queue to its Step 0 state (empty)
             this.updateAlgorithmDescription();
+            
+            // --- MODIFICATION: Populate the initial queue ---
+            this.updateInitialQueue();
+            // --- END MODIFICATION ---
+
             return true; // Indicate success
 
         } catch (error) {
@@ -173,13 +187,11 @@ class Controller {
 
         if (shouldBeRunning) {
             this.state.resume();
-            // --- UPDATED: Target new button ---
             this.ui.playPauseBtn.innerHTML = '<span class="btn-icon">⏸️</span><span class="btn-text">Pause</span>';
             this.ui.playPauseBtn.classList.add('active');
             this.startAnimation();
         } else {
             this.state.pause();
-            // --- UPDATED: Target new button ---
             this.ui.playPauseBtn.innerHTML = '<span class="btn-icon">▶️</span><span class="btn-text">Play</span>';
             this.ui.playPauseBtn.classList.remove('active');
             this.stopAnimation();
@@ -195,7 +207,6 @@ class Controller {
             clearInterval(this.animationInterval);
         }
 
-        // Re-calculate delay every time, in case speed changed
         const delay = this.state.getAnimationDelay();
 
         this.animationInterval = setInterval(() => {
@@ -203,13 +214,12 @@ class Controller {
                 // --- Animation finished ---
                 this.stopAnimation();
                 this.state.pause();
-                // --- UPDATED: Target new button ---
                 this.ui.playPauseBtn.innerHTML = '<span class="btn-icon">🔄</span><span class="btn-text">Replay</span>';
                 this.ui.playPauseBtn.classList.remove('active');
             } else {
                  // Normal step
                 this.renderer.updateTraceHistory();
-                this.updateAllUI();
+                 this.updateAllUI(); // This will update pending queue and stats
             }
         }, delay);
     }
@@ -231,7 +241,6 @@ class Controller {
      */
     handleStepForward() {
         this.stopAnimation();
-        // --- UPDATED: Target new button ---
         this.ui.playPauseBtn.innerHTML = '<span class="btn-icon">▶️</span><span class="btn-text">Play</span>';
         this.ui.playPauseBtn.classList.remove('active');
 
@@ -246,12 +255,11 @@ class Controller {
      */
     handleStepBackward() {
         this.stopAnimation();
-        // --- UPDATED: Target new button ---
         this.ui.playPauseBtn.innerHTML = '<span class="btn-icon">▶️</span><span class="btn-text">Play</span>';
         this.ui.playPauseBtn.classList.remove('active');
 
         if (this.state.previousStep()) {
-            this.renderer.updateTraceHistory(); // Need to update trace history on backward too
+            this.renderer.updateTraceHistory(); 
             this.updateAllUI();
         }
     }
@@ -265,19 +273,19 @@ class Controller {
         this.renderer.resetTrace();
         this.renderer.updateTraceHistory();
 
-        // --- UPDATED: Target new button ---
         this.ui.playPauseBtn.innerHTML = '<span class="btn-icon">▶️</span><span class="btn-text">Play</span>';
         this.ui.playPauseBtn.classList.remove('active');
 
+        // --- MODIFICATION: Call full UI update ---
+        // This will now correctly update the "Executed Queue" to be empty (Step 0)
         this.updateAllUI();
+        // --- END MODIFICATION ---
     }
 
     /**
      * Handle algorithm change
      */
     handleAlgorithmChange() {
-        // This is now called from main.js
-        // It will regenerate the simulation but NOT switch views
         this.generateSimulation();
     }
 
@@ -287,8 +295,6 @@ class Controller {
     handleSpeedChange(event) {
         const speed = parseInt(event.target.value);
         this.state.setAnimationSpeed(speed);
-
-        // If currently animating, restart interval with new speed
         if (this.state.isRunning) {
             this.startAnimation();
         }
@@ -297,70 +303,67 @@ class Controller {
     /**
      * Handle export to PDF
      */
-    handleExport() {
-        // Stop animation to get a clean screenshot
+    async handleExport() {
         const wasRunning = this.state.isRunning;
-        this.stopAnimation();
+        if (wasRunning) {
+            this.toggleRunPause(false); // Force pause
+        }
 
-        // --- MODIFICATION: Set state to final step for a complete screenshot ---
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        // --- MODIFICATION: Jump to final step for a complete screenshot ---
+        const currentStep = this.state.currentStepIndex; // Save current step
         this.state.jumpToStep(this.state.allSteps.length - 1);
         this.renderer.updateTraceHistory();
-        this.updateAllUI();
+        this.updateAllUI(); // This updates the serviced queue to its final state
         // --- END MODIFICATION ---
 
         try {
             const exportData = this.state.getExportData();
-            // --- MODIFICATION: Call async function ---
-            this.generatePDF(exportData);
-            // --- END MODIFICATION ---
-
+            await this.generatePDF(exportData);
         } catch (error) {
             console.error('Error exporting PDF:', error);
             this.showError('Error: ' + error.message);
         }
 
-        // Resume animation if it was running
+        // --- MODIFICATION: Jump back to the step you were on ---
+        this.state.jumpToStep(currentStep);
+        this.renderer.updateTraceHistory();
+        this.updateAllUI(); // This updates the serviced queue back to its previous state
+        // --- END MODIFICATION ---
+
         if (wasRunning) {
-            // Note: This will resume from the *last* step.
-            // A better UX might be to jump back to the step it was on.
-            // For now, this is fine.
+           this.toggleRunPause(true); // Force play
         }
     }
+
 
     /**
      * Generate PDF report
      * @private
-     * --- MODIFICATION: Made function async ---
      */
     async generatePDF(exportData) {
+        // ... (This function is unchanged and correct) ...
         const { jsPDF } = window.jspdf;
-        // Use A4 portrait, units in 'pt' for better control
         const doc = new jsPDF('p', 'pt', 'a4');
         const margin = 40;
         const pageWidth = doc.internal.pageSize.getWidth();
         const contentWidth = pageWidth - margin * 2;
         let yPos = margin;
-
-        // --- Title ---
         doc.setFontSize(20);
         doc.setFont(undefined, 'bold');
         doc.text('Disk Scheduling Report', pageWidth / 2, yPos, { align: 'center' });
         yPos += 20;
-
-        // --- Timestamp ---
         doc.setFontSize(10);
         doc.setFont(undefined, 'normal');
         doc.setTextColor(100);
         doc.text(`Generated: ${exportData.timestamp}`, pageWidth / 2, yPos, { align: 'center' });
         yPos += 30;
-
-        // --- Parameters ---
         doc.setFontSize(14);
         doc.setFont(undefined, 'bold');
         doc.setTextColor(0);
         doc.text('Parameters', margin, yPos);
         yPos += 20;
-
         doc.setFontSize(11);
         doc.setFont(undefined, 'normal');
         doc.text(`Algorithm: ${exportData.algorithm.toUpperCase()}`, margin, yPos);
@@ -373,22 +376,18 @@ class Controller {
              doc.text(`Direction: ${exportData.direction}`, margin, yPos);
              yPos += 18;
         }
-        // Handle long request queues by splitting
         doc.text('Request Queue:', margin, yPos);
         yPos += 18;
         doc.setFontSize(10);
         doc.setTextColor(80);
         const queueText = doc.splitTextToSize(exportData.requestQueue.join(', '), contentWidth);
         doc.text(queueText, margin, yPos);
-        yPos += (queueText.length * 12) + 10; // Add padding
-
-        // --- Results ---
+        yPos += (queueText.length * 12) + 10;
         doc.setFontSize(14);
         doc.setFont(undefined, 'bold');
         doc.setTextColor(0);
         doc.text('Results', margin, yPos);
         yPos += 20;
-
         doc.setFontSize(11);
         doc.setFont(undefined, 'normal');
         doc.text(`Total Head Movement: ${exportData.totalHeadMovement}`, margin, yPos);
@@ -397,51 +396,35 @@ class Controller {
         yPos += 18;
         doc.text(`Average Seek Time: ${exportData.averageSeekTime}`, margin, yPos);
         yPos += 30;
-
-
-        // --- Visuals (using html2canvas) ---
         doc.setFontSize(14);
         doc.setFont(undefined, 'bold');
         doc.text('Visuals', margin, yPos);
         yPos += 20;
-
         try {
             const diskCanvas = document.getElementById('diskCanvas');
             const graphCanvas = document.getElementById('graphCanvas');
-
-            // --- MODIFICATION: Correctly await promises ---
             const diskImg = await html2canvas(diskCanvas, { scale: 2 });
             const graphImg = await html2canvas(graphCanvas, { scale: 2 });
-            
             const diskImgData = diskImg.toDataURL('image/png');
             const graphImgData = graphImg.toDataURL('image/png');
-            // --- END MODIFICATION ---
-
-            // Calculate aspect ratios
             const diskRatio = diskImg.height / diskImg.width;
             const graphRatio = graphImg.height / graphImg.width;
-
             const imgHeightDisk = contentWidth * diskRatio;
             const imgHeightGraph = contentWidth * graphRatio;
-            
             doc.text('Disk Trace:', margin, yPos);
             yPos += 15;
             doc.addImage(diskImgData, 'PNG', margin, yPos, contentWidth, imgHeightDisk);
             yPos += imgHeightDisk + 20;
-
             doc.text('Position vs. Time Graph:', margin, yPos);
             yPos += 15;
             doc.addImage(graphImgData, 'PNG', margin, yPos, contentWidth, imgHeightGraph);
             yPos += imgHeightGraph + 20;
-
         } catch (e) {
             console.error('Error adding canvas images:', e);
             doc.setTextColor(255, 0, 0);
             doc.text('Error rendering canvas images.', margin, yPos);
             yPos += 20;
         }
-
-        // --- Execution Trace ---
         doc.addPage();
         yPos = margin;
         doc.setFontSize(14);
@@ -449,13 +432,10 @@ class Controller {
         doc.setTextColor(0);
         doc.text('Execution Trace', margin, yPos);
         yPos += 20;
-
         doc.setFontSize(10);
         doc.setFont(undefined, 'normal');
-
         for (const step of exportData.allSteps) {
             const text = `Step ${step.step}: Head at ${step.headPosition}, Seek: ${step.seekDistance}, Total Move: ${step.totalHeadMovement}, Serviced: [${step.servicedQueue.join(', ')}]`;
-
             if (yPos > doc.internal.pageSize.getHeight() - margin) {
                 doc.addPage();
                 yPos = margin;
@@ -463,8 +443,6 @@ class Controller {
             doc.text(text, margin, yPos);
             yPos += 15;
         }
-
-        // --- Save PDF ---
         doc.save(`disk-scheduling-${exportData.algorithm}.pdf`);
     }
 
@@ -474,7 +452,11 @@ class Controller {
      */
     updateAllUI() {
         this.updateStatistics();
-        this.updateQueues();
+        
+        // --- MODIFICATION: Added live update for Serviced Queue ---
+        this.updateServicedQueue();
+        // --- END MODIFICATION ---
+
         this.updateStepInfo();
         this.updateActionText();
         this.renderer.render();
@@ -489,41 +471,43 @@ class Controller {
         document.getElementById('totalHeadMovement').textContent = this.state.totalHeadMovement;
         document.getElementById('seeksCount').textContent = this.state.seeksCount;
         document.getElementById('averageSeekTime').textContent = this.state.averageSeekTime.toFixed(2);
+        document.getElementById('nextTargetDisplay').textContent = this.state.nextTarget !== null ? this.state.nextTarget : '-';
     }
 
+
     /**
-     * Update queue displays
-     * @private
+     * --- NEW FUNCTION: To populate the initial queue list ---
      */
-    updateQueues() {
-        // Pending queue
-        const pendingContainer = document.getElementById('pendingQueue');
-        if (this.state.pendingRequests.length === 0) {
-            pendingContainer.innerHTML = '<span class="queue-empty">All serviced!</span>';
+    updateInitialQueue() {
+        const initialContainer = document.getElementById('initialQueue');
+        if (!initialContainer) return;
+
+        if (this.state.requestQueue.length === 0) {
+            initialContainer.innerHTML = '<span class="queue-empty">No simulation run</span>';
         } else {
-            pendingContainer.innerHTML = this.state.pendingRequests
+            initialContainer.innerHTML = this.state.requestQueue
                 .map(req => `<span class="queue-item">${req}</span>`)
                 .join('');
         }
-
-        // Serviced queue
-        // --- MODIFICATION: Handle missing element gracefully ---
-        const servicedContainer = document.getElementById('servicedQueue');
-        if (servicedContainer) {
-            if (this.state.servicedRequests.length === 0) {
-                servicedContainer.innerHTML = '<span class="queue-empty">None yet</span>';
-            } else {
-                servicedContainer.innerHTML = this.state.servicedRequests
-                    .map(req => `<span class="queue-item serviced">${req}</span>`)
-                    .join('');
-            }
-        }
-        // --- END MODIFICATION ---
-
-        // Next target
-        const nextTargetDisplay = document.getElementById('nextTargetDisplay');
-        nextTargetDisplay.textContent = this.state.nextTarget !== null ? this.state.nextTarget : '-';
     }
+
+    /**
+     * --- MODIFICATION: This function now updates the queue LIVE ---
+     */
+    updateServicedQueue() {
+        const servicedContainer = document.getElementById('servicedQueue');
+        if (!servicedContainer) return;
+
+        // Get the serviced queue from the *current* step
+        if (this.state.servicedRequests.length === 0) {
+            servicedContainer.innerHTML = '<span class="queue-empty">None serviced</span>';
+        } else {
+            servicedContainer.innerHTML = this.state.servicedRequests
+                .map(req => `<span class="queue-item">${req}</span>`)
+                .join('');
+        }
+    }
+
 
     /**
      * Update step information
@@ -538,35 +522,36 @@ class Controller {
      * @private
      */
     updateActionText() {
-        // --- MODIFICATION: Handle missing element gracefully ---
         const actionTextEl = document.getElementById('currentActionText');
         if (actionTextEl) {
-            const currentStep = this.state.getCurrentStep();
+             const currentStep = this.state.getCurrentStep();
             if (currentStep) {
                 actionTextEl.textContent = currentStep.currentAction;
-                actionTextEl.style.color = 'var(--color-text-primary)'; // Reset color
+                actionTextEl.style.color = 'var(--color-text-primary)';
                 actionTextEl.style.fontWeight = 'var(--font-weight-medium)';
             }
         }
-        // --- END MODIFICATION ---
     }
 
     /**
      * Update algorithm description
      */
     updateAlgorithmDescription() {
+        const descEl = document.getElementById('algorithmDescription');
+        if (!descEl) return;
+
         const AlgorithmClass = this.algorithms.get(this.state.algorithm);
-        let description = "Select an algorithm to begin.";
-        if (AlgorithmClass) {
-            // Check for a static description property on the class
-            if (AlgorithmClass.description) {
-                description = AlgorithmClass.description;
-            } else {
-                // Fallback if not defined
-                description = `${this.state.algorithm.toUpperCase()}: Description not available.`;
-            }
-        }
-        document.getElementById('algorithmDescription').textContent = description;
+        
+        // --- MODIFICATION: Get description from static property ---
+        let description = "Algorithm Visualizer";
+        if (AlgorithmClass && AlgorithmClass.description) {
+            description = AlgorithmClass.description;
+        } else if (AlgorithmClass) {
+            description = this.state.algorithm.toUpperCase() + " Algorithm";
+}
+        // --- END MODIFICATION ---
+        
+        descEl.textContent = description;
     }
 
     /**
@@ -574,17 +559,15 @@ class Controller {
      */
     showError(message) {
         console.error(message);
-        // --- MODIFICATION: Handle missing element gracefully ---
         const errorEl = document.getElementById('currentActionText');
         if (errorEl) {
             errorEl.textContent = message;
             errorEl.style.color = 'red';
             errorEl.style.fontWeight = 'bold';
+            errorEl.parentElement.style.display = 'block'; // Make sure it's visible
         } else {
-            // Fallback if the element was removed
-            alert(message);
+            alert(message); // Fallback
         }
-        // --- END MODIFICATION ---
     }
 }
 

@@ -54,7 +54,7 @@ function initializeApp() {
         // 7. --- Setup Main UI Event Listeners (Moved from index.html) ---
 
         // Listener for the FIRST "Run Simulation" button
-        document.getElementById('runBtn').addEventListener('click', () => {
+        document.getElementById('runSimulationBtn').addEventListener('click', () => {
             controller.handleRunSimulation();
         });
 
@@ -63,38 +63,54 @@ function initializeApp() {
             controller.handleFullReset();
         });
 
-        // Listener for the Direction Group (SCAN/LOOK)
+        // --- MODIFICATION: Add listeners for all inputs ---
+        
+        // Get all input elements
         const algorithmSelect = document.getElementById('algorithmSelect');
+        const initialHeadPosition = document.getElementById('initialHeadPosition');
+        const maxTrackNumber = document.getElementById('maxTrackNumber');
+        const requestQueue = document.getElementById('requestQueue');
         const directionGroup = document.getElementById('directionGroup');
+        const directionInputs = document.querySelectorAll('input[name="direction"]');
+        
         const scanAlgos = ['scan', 'cscan', 'look', 'clook'];
 
-        const toggleDirectionGroup = () => {
+        // This function will be called by ALL input listeners
+        const handleInputChange = () => {
+            // 1. Toggle the direction group visibility
             if (scanAlgos.includes(algorithmSelect.value)) {
                 directionGroup.style.display = 'flex';
             } else {
                 directionGroup.style.display = 'none';
             }
+            
+            // 2. Re-generate the simulation to update the state
+            // This will also update the "Initial Request Queue" box
+            controller.generateSimulation();
         };
-        algorithmSelect.addEventListener('change', () => {
-            toggleDirectionGroup();
-            // Also regenerate simulation on algorithm change
-            controller.handleAlgorithmChange();
-        });
-        // Call it once on load
-        toggleDirectionGroup();
+
+        // Attach the *single* handler to all inputs
+        algorithmSelect.addEventListener('change', handleInputChange);
+        initialHeadPosition.addEventListener('input', handleInputChange);
+        maxTrackNumber.addEventListener('input', handleInputChange);
+        requestQueue.addEventListener('input', handleInputChange);
+        directionInputs.forEach(input => input.addEventListener('change', handleInputChange));
+
+        // Call it once on load to set initial state
+        handleInputChange();
+        // --- END OF MODIFICATION ---
 
 
         // 8. Handle initial canvas sizing
         canvasRenderer.handleResize();
         console.log('✓ Canvas resized');
 
-        // 9. Generate initial simulation (but don't switch view)
-        controller.generateSimulation();
-        console.log('✓ Initial simulation generated');
 
-        // 10. Update UI
-        controller.updateAllUI();
-        console.log('✓ UI updated');
+        // --- MODIFICATION: REMOVED Redundant UI Update ---
+        // The call to handleInputChange() above already generates
+        // the simulation and updates the UI. This line is not needed.
+        // controller.updateAllUI();
+        // --- END MODIFICATION ---
 
         console.log('✅ Application ready!');
 
@@ -131,3 +147,4 @@ window.addEventListener('error', (event) => {
 window.addEventListener('unhandledrejection', (event) => {
     console.error('Unhandled promise rejection:', event.reason);
 });
+

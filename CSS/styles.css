@@ -1,125 +1,82 @@
-/* =================================
-   Root Variables for Styling
-   ================================= */
-:root {
-  /* ... (all your existing variables are unchanged) ... */
-  --color-primary: #007aff;
-  --color-primary-light: #e6f2ff;
-  --color-success: #34c759;
-  --color-danger: #ff3b30;
-  --color-secondary: #8e8e93;
-  
-  --color-text-primary: #1d1d1f;
-  --color-text-secondary: #6e6e73;
-  --color-text-on-primary: #ffffff;
-  
-  --color-background-primary: #ffffff;
-  --color-background-secondary: #f5f5f7;
-  --color-border: #d2d2d7;
+/* =====================================================
+ * CSS/STYLES.CSS - Visual Styles
+ * ===================================================== */
 
-  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
-  --font-size-base: 15px;
-  --font-size-xs: 0.8rem;
-  --font-size-sm: 0.9rem;
-  --font-size-md: 1rem;
-  --font-size-lg: 1.1rem;
-  --font-size-h1: 1.75rem;
-  --font-size-h2: 1.25rem;
-  --font-size-h3: 1.1rem;
+/* ===================================
+ * Base & Typography
+ * =================================== */
+:root {
+  --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  
+  --color-primary: #007bff;
+  --color-primary-light: #e6f2ff;
+  --color-primary-dark: #0056b3;
+  --color-success: #28a745;
+  --color-danger: #dc3545;
+  --color-secondary: #6c757d;
+  
+  --color-background: #ffffff;
+  --color-background-light: #f8f9fa;
+  --color-background-dark: #e9ecef;
+
+  --color-text-primary: #212529;
+  --color-text-secondary: #6c757d;
+  --color-text-on-primary: #ffffff;
+  --color-text-link: #007bff;
+  
+  --color-border: #dee2e6;
+  --color-border-light: #e9ecef;
+  
   --font-weight-regular: 400;
   --font-weight-medium: 500;
-  --font-weight-bold: 600;
-
-  --border-radius-small: 4px;
-  --border-radius-medium: 8px;
-  --border-radius-large: 12px;
-  --shadow-small: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --transition-speed: 0.2s ease;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  
+  --border-radius-sm: 0.25rem;
+  --border-radius-md: 0.5rem;
+  --border-radius-lg: 0.75rem;
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
-/* =================================
-   Global Resets & Defaults
-   ================================= */
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-html {
-  font-size: var(--font-size-base);
-}
-
 body {
-  font-family: var(--font-family);
+  font-family: var(--font-primary);
+  font-size: 14px;
   color: var(--color-text-primary);
-  background-color: var(--color-background-secondary);
+  background-color: var(--color-background-light);
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3 {
-  font-weight: var(--font-weight-bold);
-  line-height: 1.3;
-}
-
-h1 { font-size: var(--font-size-h1); }
-h2 { font-size: var(--font-size-h2); }
-h3 { font-size: var(--font-size-h3); }
-
-p {
-  font-size: var(--font-size-md);
-  color: var(--color-text-secondary);
-}
-
+/* ===================================
+ * Form Controls (Sidebar)
+ * =================================== */
 label {
-  font-size: var(--font-size-sm);
+  font-size: 0.875rem;
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
-}
-
-/* =================================
-   Card Component Style
-   ================================= */
-.info-section,
-.visualization-panel .disk-container,
-.visualization-panel .graph-container {
-  background-color: var(--color-background-primary);
-  border-radius: var(--border-radius-large);
-  border: 1px solid var(--color-border);
-  padding: 1.25rem; 
-  box-shadow: var(--shadow-small);
-}
-
-/* Special case for stats card, slightly less padding */
-.visualization-panel .info-section {
-  background-color: var(--color-background-primary);
-  border-radius: var(--border-radius-large);
-  border: 1px solid var(--color-border);
-  padding: 1rem; 
-  box-shadow: var(--shadow-small);
-}
-
-
-/* =================================
-   Control Panel Elements
-   ================================= */
-.header-title p {
-  font-size: var(--font-size-md); /* Compact */
-  color: var(--color-text-secondary);
-  margin-top: 0.25rem;
 }
 
 input[type="text"],
 input[type="number"],
 select {
   width: 100%;
-  padding: 0.6rem 0.75rem; 
-  font-size: var(--font-size-sm); 
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-family: var(--font-primary);
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-medium);
-  background-color: var(--color-background-secondary);
-  transition: all var(--transition-speed);
+  border-radius: var(--border-radius-sm);
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 input[type="text"]:focus,
@@ -130,184 +87,240 @@ select:focus {
   box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
-.btn {
-  font-size: var(--font-size-sm); 
-  font-weight: var(--font-weight-medium);
-  padding: 0.6rem 1rem; 
-  border: none;
-  border-radius: var(--border-radius-medium);
-  cursor: pointer;
-  transition: all var(--transition-speed);
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23333' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1em;
+}
+
+.radio-label {
   display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-primary);
+}
+
+input[type="radio"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-primary);
+}
+
+.slider {
+  flex-grow: 1;
+  width: 100%;
+  accent-color: var(--color-primary);
+}
+
+.speed-label {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ===================================
+ * Buttons
+ * =================================== */
+.btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-primary);
+  border: 1px solid transparent;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s, color 0.2s;
   text-decoration: none;
+  line-height: 1.5;
 }
 
-.btn .btn-icon {
-  font-size: 1.1em;
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
-.btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
+.btn-icon {
+  font-size: 1rem;
+}
+.btn-text {
+  flex-grow: 1;
+  text-align: left;
+}
+
+/* Primary Button (Run) */
 .btn-primary {
   background-color: var(--color-primary);
   color: var(--color-text-on-primary);
+  border-color: var(--color-primary);
 }
-.btn-primary:hover { background-color: #006ae6; }
+.btn-primary:hover {
+  background-color: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+}
+.btn-primary.active {
+  background-color: var(--color-secondary);
+  border-color: var(--color-secondary);
+}
 
+/* Secondary Button (Steps) */
 .btn-secondary {
-  background-color: var(--color-background-primary);
-  color: var(--color-primary);
-  border: 1px solid var(--color-primary);
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
 }
-.btn-secondary:hover { background-color: var(--color-primary-light); }
+.btn-secondary:hover {
+  background-color: var(--color-background-light);
+  border-color: var(--color-border);
+}
 
+/* Danger Button (Reset) */
 .btn-danger {
+  background-color: var(--color-background);
+  color: var(--color-danger);
+  border-color: var(--color-border);
+}
+.btn-danger:hover {
   background-color: var(--color-danger);
   color: var(--color-text-on-primary);
+  border-color: var(--color-danger);
 }
-.btn-danger:hover { background-color: #e6291e; }
 
+/* Success Button (Export) */
 .btn-success {
+  background-color: var(--color-background);
+  color: var(--color-success);
+  border-color: var(--color-border);
+}
+.btn-success:hover {
   background-color: var(--color-success);
   color: var(--color-text-on-primary);
-}
-.btn-success:hover { background-color: #2dae4e; }
-
-.slider {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 8px;
-  background: var(--color-border);
-  border-radius: 5px;
-  outline: none;
-  opacity: 0.7;
-  transition: opacity var(--transition-speed);
-}
-.slider:hover { opacity: 1; }
-
-.slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  background: var(--color-primary);
-  border-radius: 50%;
-  cursor: pointer;
+  border-color: var(--color-success);
 }
 
-/* =================================
-   Visualization Panel
-   ================================= */
 
-/* --- MODIFICATION: REMOVED all styles for --- */
-/* .head-position-container and #headPositionTracker */
-/* --- END MODIFICATION --- */
-
-
-.disk-canvas, .graph-canvas {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-.disk-container {
-  /* --- MODIFICATION: Reset padding --- */
-  padding: 0; 
-  /* --- END MODIFICATION --- */
-  overflow: hidden; 
-  position: relative;
-  z-index: 1; 
-}
-
-/* This hides the action text box */
-.action-text-container {
-  display: none;
-}
-
-.action-text {
-  font-size: var(--font-size-md);
+/* ===================================
+ * Queue Items (Sidebar)
+ * =================================== */
+.queue-item {
+  display: inline-block;
+  font-size: 0.875rem;
   font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-  text-align: center;
-  font-style: italic;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--border-radius-sm);
+  background-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  border: 1px solid var(--color-primary);
 }
 
-.step-info {
-  text-align: center;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
-/* =================================
-   Information Panel
-   ================================= */
-.info-section {
-  /* This is the default card style for the sidebar */
-  background-color: var(--color-background-secondary);
-  border-radius: var(--border-radius-large);
-  padding: 1rem;
-}
-
-.info-section h3 {
-  margin-bottom: 0.75rem;
-}
-
-.stat-box {
-  background-color: var(--color-background-primary);
-  border-radius: var(--border-radius-medium);
-  padding: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--color-border);
-}
-
-.stat-label {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  margin-bottom: 0.25rem;
-}
-
-.stat-value {
-  font-size: 1.5rem;
-  font-weight: var(--font-weight-bold);
-  color: var(--color-primary);
-  line-height: 1.2;
-}
-
-/* --- MODIFICATION: Make head position stat red --- */
-#currentHeadPosContainer .stat-value {
-  color: var(--color-danger);
-}
-/* --- END MODIFICATION --- */
-
-.queue-container {
-  background-color: var(--color-background-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-medium);
-  padding: 0.75rem;
-  min-height: 80px;
+.queue-item.serviced {
+  background-color: #eaf8ee; /* Green light */
+  color: #1c7430; /* Green dark */
+  border-color: #28a745;
 }
 
 .queue-empty {
+  font-size: 0.875rem;
   color: var(--color-text-secondary);
   font-style: italic;
-  font-size: var(--font-size-sm);
 }
 
-.queue-item {
-  background-color: var(--color-primary);
-  color: var(--color-text-on-primary);
-  font-size: var(--font-size-xs);
+.next-target-box {
+  background-color: var(--color-background);
+  border: 2px dashed var(--color-primary);
+  border-radius: var(--border-radius-sm);
+  padding: 0.5rem;
+  text-align: center;
+}
+
+.next-target {
+  font-size: 1.5rem;
   font-weight: var(--font-weight-bold);
-  padding: 0.2rem 0.6rem;
-  border-radius: 99px; 
+  color: var(--color-primary);
+}
+
+/* ===================================
+ * Visualization Panel (Main)
+ * =================================== */
+
+.stats-card {
+  background-color: var(--color-background);
+  border-radius: var(--border-radius-md);
+  /* --- MODIFICATION: Reduced padding --- */
+  padding: 0.5rem 0.75rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border-light);
+}
+
+.stats-card h3 {
+  /* --- MODIFICATION: Reduced size/margin --- */
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: 0.5rem;
+  /* --- END MODIFICATION --- */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stat-box {
+  background: var(--color-background-light);
+  /* --- MODIFICATION: Reduced padding --- */
+  padding: 0.5rem 0.75rem;
+  /* --- END MODIFICATION --- */
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--color-border-light);
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  /* --- MODIFICATION: Reduced size --- */
+  font-size: 0.65rem;
+  /* --- END MODIFICATION --- */
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  /* --- MODIFICATION: Reduced size/margin --- */
+  font-size: 1.25rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  margin-top: 0;
+  /* --- END MODIFICATION --- */
+  line-height: 1.2;
+}
+
+.stat-value#nextTargetDisplay {
+  color: var(--color-text-primary);
+}
+
+.disk-canvas,
+.graph-canvas {
+  width: 100%;
+  height: auto;
+}
+
+/* This is the text "Moving from..." */
+/* We can hide it */
+.action-text-container {
+  display: none;
 }
 
