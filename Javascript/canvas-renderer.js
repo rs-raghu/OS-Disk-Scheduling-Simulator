@@ -294,7 +294,7 @@ class CanvasRenderer {
     }
 
     /**
-     * Render position vs. time graph
+     * Render position vs. time graph (Time on Y-axis, Position on X-axis)
      * @private
      */
     renderPositionGraph() {
@@ -309,40 +309,40 @@ class CanvasRenderer {
         ctx.fillRect(0, 0, this.graphCanvas.width, this.graphCanvas.height);
 
         // Draw grid
-        this.drawGraphGrid(ctx, x, y, width, height);
+        this.drawGraphGridSwapped(ctx, x, y, width, height);
 
         // Draw axes
-        this.drawGraphAxes(ctx, x, y, width, height);
+        this.drawGraphAxesSwapped(ctx, x, y, width, height);
 
-        // Draw data line
-        this.drawGraphDataLine(ctx, x, y, width, height);
+        // Draw data line (zigzag pattern going down)
+        this.drawGraphDataLineSwapped(ctx, x, y, width, height);
 
         // Draw axis labels
-        this.drawGraphAxisLabels(ctx, x, y, width, height);
+        this.drawGraphAxisLabelsSwapped(ctx, x, y, width, height);
     }
 
     /**
-     * Draw graph grid
+     * Draw graph grid (swapped axes)
      * @private
      */
-    drawGraphGrid(ctx, x, y, width, height) {
+    drawGraphGridSwapped(ctx, x, y, width, height) {
         ctx.strokeStyle = this.colors.gridLine;
         ctx.lineWidth = 1;
 
-        // Vertical grid lines
-        const timeIntervals = Math.min(this.state.allSteps.length, 10);
-        for (let i = 0; i <= timeIntervals; i++) {
-            const xPos = x + (width / timeIntervals) * i;
+        // Vertical grid lines (for position intervals)
+        const positionIntervals = 5;
+        for (let i = 0; i <= positionIntervals; i++) {
+            const xPos = x + (width / positionIntervals) * i;
             ctx.beginPath();
             ctx.moveTo(xPos, y);
             ctx.lineTo(xPos, y + height);
             ctx.stroke();
         }
 
-        // Horizontal grid lines
-        const positionIntervals = 5;
-        for (let i = 0; i <= positionIntervals; i++) {
-            const yPos = y + (height / positionIntervals) * i;
+        // Horizontal grid lines (for time intervals)
+        const timeIntervals = Math.min(this.state.allSteps.length, 15);
+        for (let i = 0; i <= timeIntervals; i++) {
+            const yPos = y + (height / timeIntervals) * i;
             ctx.beginPath();
             ctx.moveTo(x, yPos);
             ctx.lineTo(x + width, yPos);
@@ -351,20 +351,20 @@ class CanvasRenderer {
     }
 
     /**
-     * Draw graph axes
+     * Draw graph axes (swapped)
      * @private
      */
-    drawGraphAxes(ctx, x, y, width, height) {
+    drawGraphAxesSwapped(ctx, x, y, width, height) {
         ctx.strokeStyle = this.colors.border;
         ctx.lineWidth = 2;
 
-        // Y-axis
+        // X-axis (left side, for position)
         ctx.beginPath();
         ctx.moveTo(x, y);
         ctx.lineTo(x, y + height);
         ctx.stroke();
 
-        // X-axis
+        // Y-axis (bottom side, for time)
         ctx.beginPath();
         ctx.moveTo(x, y + height);
         ctx.lineTo(x + width, y + height);
@@ -372,21 +372,23 @@ class CanvasRenderer {
     }
 
     /**
-     * Draw graph data line
+     * Draw graph data line (swapped - zigzag pattern going DOWN)
      * @private
      */
-    drawGraphDataLine(ctx, x, y, width, height) {
+    drawGraphDataLineSwapped(ctx, x, y, width, height) {
         if (this.state.allSteps.length === 0) return;
 
         ctx.strokeStyle = this.colors.pending;
         ctx.lineWidth = 2;
         ctx.beginPath();
 
-        // Plot each step
+        // Plot each step - Time on Y-axis (going DOWN), Position on X-axis
         for (let i = 0; i <= this.state.currentStepIndex && i < this.state.allSteps.length; i++) {
             const step = this.state.allSteps[i];
-            const xPos = x + (i / Math.max(1, this.state.allSteps.length - 1)) * width;
-            const yPos = y + height - (step.headPosition / this.state.maxTrackNumber) * height;
+            // X position based on head position (0 to maxTrack)
+            const xPos = x + (step.headPosition / this.state.maxTrackNumber) * width;
+            // Y position based on time step (going downward)
+            const yPos = y + (i / Math.max(1, this.state.allSteps.length - 1)) * height;
 
             if (i === 0) {
                 ctx.moveTo(xPos, yPos);
@@ -399,51 +401,61 @@ class CanvasRenderer {
 
         // Draw current point
         const currentStep = this.state.getCurrentStep();
-        const currentX = x + (this.state.currentStepIndex / Math.max(1, this.state.allSteps.length - 1)) * width;
-        const currentY = y + height - (currentStep.headPosition / this.state.maxTrackNumber) * height;
+        const currentX = x + (currentStep.headPosition / this.state.maxTrackNumber) * width;
+        const currentY = y + (this.state.currentStepIndex / Math.max(1, this.state.allSteps.length - 1)) * height;
 
         ctx.fillStyle = this.colors.pending;
         ctx.beginPath();
-        ctx.arc(currentX, currentY, 4, 0, Math.PI * 2);
+        ctx.arc(currentX, currentY, 5, 0, Math.PI * 2);
         ctx.fill();
+
+        // Draw circle outline
+        ctx.strokeStyle = this.colors.head;
+        ctx.lineWidth = 2;
+        ctx.stroke();
     }
 
     /**
-     * Draw graph axis labels
+     * Draw graph axis labels (swapped)
      * @private
      */
-    drawGraphAxisLabels(ctx, x, y, width, height) {
+    drawGraphAxisLabelsSwapped(ctx, x, y, width, height) {
         ctx.fillStyle = this.colors.text;
         ctx.font = '12px Arial';
 
-        // X-axis label
+        // X-axis label (position - horizontal)
         ctx.textAlign = 'center';
-        ctx.fillText('Time (Steps)', x + width / 2, y + height + 30);
+        ctx.fillText('Disk Position', x + width / 2, y + height + 30);
 
-        // Y-axis label
+        // Y-axis label (time - vertical)
         ctx.save();
         ctx.translate(x - 30, y + height / 2);
         ctx.rotate(-Math.PI / 2);
         ctx.textAlign = 'center';
-        ctx.fillText('Position', 0, 0);
+        ctx.fillText('Time (Steps)', 0, 0);
         ctx.restore();
 
-        // Y-axis values
-        ctx.textAlign = 'right';
+        // X-axis values (positions: 0, maxTrack)
+        ctx.textAlign = 'center';
         ctx.font = '10px Arial';
-        for (let i = 0; i <= 5; i++) {
-            const yPos = y + (height / 5) * i;
-            const posValue = this.state.maxTrackNumber - (i / 5) * this.state.maxTrackNumber;
-            ctx.fillText(Math.round(posValue), x - 8, yPos + 3);
+        ctx.fillText('0', x, y + height + 15);
+        ctx.textAlign = 'center';
+        ctx.fillText(this.state.maxTrackNumber, x + width, y + height + 15);
+
+        // X-axis intermediate values
+        for (let i = 1; i <= 4; i++) {
+            const xPos = x + (width / 5) * i;
+            const posValue = Math.round((i / 5) * this.state.maxTrackNumber);
+            ctx.fillText(posValue, xPos, y + height + 15);
         }
 
-        // X-axis values
-        ctx.textAlign = 'center';
-        const timeIntervals = Math.min(this.state.allSteps.length, 10);
+        // Y-axis values (time: 0 to max steps)
+        ctx.textAlign = 'right';
+        const timeIntervals = Math.min(this.state.allSteps.length, 8);
         for (let i = 0; i <= timeIntervals; i++) {
-            const xPos = x + (width / timeIntervals) * i;
+            const yPos = y + (height / timeIntervals) * i;
             const stepValue = Math.round((i / timeIntervals) * (this.state.allSteps.length - 1));
-            ctx.fillText(stepValue, xPos, y + height + 15);
+            ctx.fillText(stepValue, x - 8, yPos + 3);
         }
     }
 
