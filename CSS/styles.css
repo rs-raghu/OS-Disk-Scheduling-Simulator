@@ -2,7 +2,7 @@
    Root Variables for Styling
    ================================= */
 :root {
-  /* Color Palette */
+  /* ... (all your existing variables are unchanged) ... */
   --color-primary: #007aff;
   --color-primary-light: #e6f2ff;
   --color-success: #34c759;
@@ -17,25 +17,23 @@
   --color-background-secondary: #f5f5f7;
   --color-border: #d2d2d7;
 
-  /* Typography */
   --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     Helvetica, Arial, sans-serif;
-  --font-size-base: 15px; /* Slightly smaller base */
-  --font-size-xs: 0.8rem;  /* 12px */
-  --font-size-sm: 0.9rem;  /* 13.5px */
-  --font-size-md: 1rem;    /* 15px */
+  --font-size-base: 15px;
+  --font-size-xs: 0.8rem;
+  --font-size-sm: 0.9rem;
+  --font-size-md: 1rem;
   --font-size-lg: 1.1rem;
-  --font-size-h1: 1.75rem; /* More compact */
+  --font-size-h1: 1.75rem;
   --font-size-h2: 1.25rem;
   --font-size-h3: 1.1rem;
   --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-bold: 600;
 
-  /* Sizing & Spacing */
   --border-radius-small: 4px;
   --border-radius-medium: 8px;
-  --border-radius-large: 12px; /* Smaller cards */
+  --border-radius-large: 12px;
   --shadow-small: 0 1px 2px rgba(0, 0, 0, 0.05);
   --transition-speed: 0.2s ease;
 }
@@ -84,16 +82,24 @@ label {
    Card Component Style
    ================================= */
 .info-section,
-.visualization-panel .visualization-header,
 .visualization-panel .disk-container,
-.visualization-panel .graph-container,
-.visualization-panel .action-text-container {
+.visualization-panel .graph-container {
   background-color: var(--color-background-primary);
   border-radius: var(--border-radius-large);
   border: 1px solid var(--color-border);
-  padding: 1.25rem; /* Smaller padding */
+  padding: 1.25rem; 
   box-shadow: var(--shadow-small);
 }
+
+/* Special case for stats card, slightly less padding */
+.visualization-panel .info-section {
+  background-color: var(--color-background-primary);
+  border-radius: var(--border-radius-large);
+  border: 1px solid var(--color-border);
+  padding: 1rem; 
+  box-shadow: var(--shadow-small);
+}
+
 
 /* =================================
    Control Panel Elements
@@ -104,13 +110,12 @@ label {
   margin-top: 0.25rem;
 }
 
-/* --- Form Inputs & Selects (MORE COMPACT) --- */
 input[type="text"],
 input[type="number"],
 select {
   width: 100%;
-  padding: 0.6rem 0.75rem; /* Smaller padding */
-  font-size: var(--font-size-sm); /* Smaller font */
+  padding: 0.6rem 0.75rem; 
+  font-size: var(--font-size-sm); 
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius-medium);
   background-color: var(--color-background-secondary);
@@ -125,11 +130,10 @@ select:focus {
   box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
-/* --- Buttons (MORE COMPACT) --- */
 .btn {
-  font-size: var(--font-size-sm); /* Smaller font */
+  font-size: var(--font-size-sm); 
   font-weight: var(--font-weight-medium);
-  padding: 0.6rem 1rem; /* Smaller padding */
+  padding: 0.6rem 1rem; 
   border: none;
   border-radius: var(--border-radius-medium);
   cursor: pointer;
@@ -175,10 +179,9 @@ select:focus {
 }
 .btn-success:hover { background-color: #2dae4e; }
 
-/* --- Sliders --- */
 .slider {
   -webkit-appearance: none;
-  appearance: none; /* <-- THIS IS THE FIX */
+  appearance: none;
   width: 100%;
   height: 8px;
   background: var(--color-border);
@@ -202,10 +205,30 @@ select:focus {
 /* =================================
    Visualization Panel
    ================================= */
+
+/* --- MODIFICATION: REMOVED all styles for --- */
+/* .head-position-container and #headPositionTracker */
+/* --- END MODIFICATION --- */
+
+
 .disk-canvas, .graph-canvas {
   width: 100%;
   height: auto;
   display: block;
+}
+
+.disk-container {
+  /* --- MODIFICATION: Reset padding --- */
+  padding: 0; 
+  /* --- END MODIFICATION --- */
+  overflow: hidden; 
+  position: relative;
+  z-index: 1; 
+}
+
+/* This hides the action text box */
+.action-text-container {
+  display: none;
 }
 
 .action-text {
@@ -223,10 +246,10 @@ select:focus {
 }
 
 /* =================================
-   Information Panel (MORE COMPACT)
+   Information Panel
    ================================= */
 .info-section {
-  /* This creates the card look */
+  /* This is the default card style for the sidebar */
   background-color: var(--color-background-secondary);
   border-radius: var(--border-radius-large);
   padding: 1rem;
@@ -239,25 +262,31 @@ select:focus {
 .stat-box {
   background-color: var(--color-background-primary);
   border-radius: var(--border-radius-medium);
-  padding: 0.75rem; /* Smaller padding */
+  padding: 0.75rem;
   display: flex;
   flex-direction: column;
   border: 1px solid var(--color-border);
 }
 
 .stat-label {
-  font-size: var(--font-size-xs); /* Extra small */
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
   margin-bottom: 0.25rem;
 }
 
 .stat-value {
-  font-size: 1.5rem; /* Smaller */
+  font-size: 1.5rem;
   font-weight: var(--font-weight-bold);
   color: var(--color-primary);
   line-height: 1.2;
 }
+
+/* --- MODIFICATION: Make head position stat red --- */
+#currentHeadPosContainer .stat-value {
+  color: var(--color-danger);
+}
+/* --- END MODIFICATION --- */
 
 .queue-container {
   background-color: var(--color-background-primary);
@@ -273,32 +302,12 @@ select:focus {
   font-size: var(--font-size-sm);
 }
 
-/* --- Queue Items (You'll add these with JS) --- */
 .queue-item {
   background-color: var(--color-primary);
   color: var(--color-text-on-primary);
-  font-size: var(--font-size-xs); /* Extra small */
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   padding: 0.2rem 0.6rem;
-  border-radius: 99px; /* Pill shape */
-}
-
-/* This is a typo in my previous CSS, fixing it */
-#servicedQueue .queue-item {
-  background-color: var(--color-success);
-}
-
-.next-target-box {
-  background-color: var(--color-primary-light);
-  border: 2px dashed var(--color-primary);
-  border-radius: var(--border-radius-medium);
-  padding: 0.75rem;
-  text-align: center;
-}
-
-.next-target {
-  font-size: 1.75rem; /* Smaller */
-  font-weight: var(--font-weight-bold);
-  color: var(--color-primary);
+  border-radius: 99px; 
 }
 

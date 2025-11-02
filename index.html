@@ -186,25 +186,30 @@
       <div class="main-content">
         <section class="visualization-panel">
           
-          <!-- Live Statistics Card (Now includes Next Target) -->
+          <!-- Live Statistics Card (Now includes ALL 5 stats) -->
           <div class="info-section">
             <div class="stats-grid">
-              <!-- Stat Box 1 -->
+              <!-- Stat Box 1: Moved from tracker -->
+              <div class="stat-box" id="currentHeadPosContainer">
+                <span class="stat-label">Current Head Position</span>
+                <span class="stat-value" id="currentHeadPosition">0</span>
+              </div>
+              <!-- Stat Box 2 -->
               <div class="stat-box">
                 <span class="stat-label">Total Head Movement</span>
                 <span class="stat-value" id="totalHeadMovement">0</span>
               </div>
-              <!-- Stat Box 2 -->
+              <!-- Stat Box 3 -->
               <div class="stat-box">
                 <span class="stat-label">Seeks Count</span>
                 <span class="stat-value" id="seeksCount">0</span>
               </div>
-              <!-- Stat Box 3 -->
+              <!-- Stat Box 4 -->
               <div class="stat-box">
                 <span class="stat-label">Average Seek Time</span>
                 <span class="stat-value" id="averageSeekTime">0.00</span>
               </div>
-              <!-- Stat Box 4 (Moved from sidebar) -->
+              <!-- Stat Box 5 -->
               <div class="stat-box" id="nextTargetContainer">
                 <span class="stat-label">Next Target</span>
                 <span class="stat-value" id="nextTargetDisplay">-</span>
@@ -212,13 +217,7 @@
             </div>
           </div>
 
-          <!-- Head Position Tracker (Floats above canvas) -->
-          <div class="head-position-container">
-            <div id="headPositionTracker" class="stat-box">
-              <span class="stat-label">Current Head Position</span>
-              <span class="stat-value" id="currentHeadPosition">0</span>
-            </div>
-          </div>
+          <!-- Head Position Tracker (REMOVED) -->
 
           <!-- Disk Representation -->
           <div class="disk-container">
