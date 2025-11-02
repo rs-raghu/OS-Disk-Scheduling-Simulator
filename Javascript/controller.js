@@ -87,12 +87,15 @@ class Controller {
     handleFullReset() {
         console.log('Handle Full Reset');
         this.stopAnimation();
-        this.state.resetSimulation(); // Resets state to defaults
         
         // We need to re-generate the (empty) initial state
-        this.generateSimulation(); 
+        // This reads the DOM, which is still set to the old values
+        // We just need to reset the state object
+        this.state.initializeWithParams(this.getParametersFromDOM());
         
         this.updateAllUI();
+        this.renderer.resetTrace(); // Reset trace
+        this.renderer.render(); // Re-render canvas
         this.showConfigView(); // Switch back to config panel
     }
 
@@ -161,7 +164,8 @@ class Controller {
     toggleRunPause(forcePlay = null) {
         if (this.state.isComplete()) {
             this.handleResetAnimation();
-            return;
+            // After resetting, we want to start playing again
+            forcePlay = true; 
         }
 
         // Determine new state
@@ -298,9 +302,18 @@ class Controller {
         const wasRunning = this.state.isRunning;
         this.stopAnimation();
 
+        // --- MODIFICATION: Set state to final step for a complete screenshot ---
+        this.state.jumpToStep(this.state.allSteps.length - 1);
+        this.renderer.updateTraceHistory();
+        this.updateAllUI();
+        // --- END MODIFICATION ---
+
         try {
             const exportData = this.state.getExportData();
+            // --- MODIFICATION: Call async function ---
             this.generatePDF(exportData);
+            // --- END MODIFICATION ---
+
         } catch (error) {
             console.error('Error exporting PDF:', error);
             this.showError('Error: ' + error.message);
@@ -308,13 +321,16 @@ class Controller {
 
         // Resume animation if it was running
         if (wasRunning) {
-            this.startAnimation();
+            // Note: This will resume from the *last* step.
+            // A better UX might be to jump back to the step it was on.
+            // For now, this is fine.
         }
     }
 
     /**
      * Generate PDF report
      * @private
+     * --- MODIFICATION: Made function async ---
      */
     async generatePDF(exportData) {
         const { jsPDF } = window.jspdf;
@@ -393,11 +409,13 @@ class Controller {
             const diskCanvas = document.getElementById('diskCanvas');
             const graphCanvas = document.getElementById('graphCanvas');
 
+            // --- MODIFICATION: Correctly await promises ---
             const diskImg = await html2canvas(diskCanvas, { scale: 2 });
             const graphImg = await html2canvas(graphCanvas, { scale: 2 });
             
             const diskImgData = diskImg.toDataURL('image/png');
             const graphImgData = graphImg.toDataURL('image/png');
+            // --- END MODIFICATION ---
 
             // Calculate aspect ratios
             const diskRatio = diskImg.height / diskImg.width;
@@ -489,14 +507,18 @@ class Controller {
         }
 
         // Serviced queue
+        // --- MODIFICATION: Handle missing element gracefully ---
         const servicedContainer = document.getElementById('servicedQueue');
-        if (this.state.servicedRequests.length === 0) {
-            servicedContainer.innerHTML = '<span class="queue-empty">None yet</span>';
-        } else {
-            servicedContainer.innerHTML = this.state.servicedRequests
-                .map(req => `<span class="queue-item serviced">${req}</span>`)
-                .join('');
+        if (servicedContainer) {
+            if (this.state.servicedRequests.length === 0) {
+                servicedContainer.innerHTML = '<span class="queue-empty">None yet</span>';
+            } else {
+                servicedContainer.innerHTML = this.state.servicedRequests
+                    .map(req => `<span class="queue-item serviced">${req}</span>`)
+                    .join('');
+            }
         }
+        // --- END MODIFICATION ---
 
         // Next target
         const nextTargetDisplay = document.getElementById('nextTargetDisplay');
@@ -516,10 +538,17 @@ class Controller {
      * @private
      */
     updateActionText() {
-        const currentStep = this.state.getCurrentStep();
-        if (currentStep) {
-            document.getElementById('currentActionText').textContent = currentStep.currentAction;
+        // --- MODIFICATION: Handle missing element gracefully ---
+        const actionTextEl = document.getElementById('currentActionText');
+        if (actionTextEl) {
+            const currentStep = this.state.getCurrentStep();
+            if (currentStep) {
+                actionTextEl.textContent = currentStep.currentAction;
+                actionTextEl.style.color = 'var(--color-text-primary)'; // Reset color
+                actionTextEl.style.fontWeight = 'var(--font-weight-medium)';
+            }
         }
+        // --- END MODIFICATION ---
     }
 
     /**
@@ -527,11 +556,17 @@ class Controller {
      */
     updateAlgorithmDescription() {
         const AlgorithmClass = this.algorithms.get(this.state.algorithm);
-        if (AlgorithmClass && AlgorithmClass.description) {
-            document.getElementById('algorithmDescription').textContent = AlgorithmClass.description;
-        } else {
-             document.getElementById('algorithmDescription').textContent = "Select an algorithm to begin.";
+        let description = "Select an algorithm to begin.";
+        if (AlgorithmClass) {
+            // Check for a static description property on the class
+            if (AlgorithmClass.description) {
+                description = AlgorithmClass.description;
+            } else {
+                // Fallback if not defined
+                description = `${this.state.algorithm.toUpperCase()}: Description not available.`;
+            }
         }
+        document.getElementById('algorithmDescription').textContent = description;
     }
 
     /**
@@ -539,12 +574,17 @@ class Controller {
      */
     showError(message) {
         console.error(message);
+        // --- MODIFICATION: Handle missing element gracefully ---
         const errorEl = document.getElementById('currentActionText');
         if (errorEl) {
             errorEl.textContent = message;
             errorEl.style.color = 'red';
             errorEl.style.fontWeight = 'bold';
+        } else {
+            // Fallback if the element was removed
+            alert(message);
         }
+        // --- END MODIFICATION ---
     }
 }
 
@@ -552,3 +592,4 @@ class Controller {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = Controller;
 }
+

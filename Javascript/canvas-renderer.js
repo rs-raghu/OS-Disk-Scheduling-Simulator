@@ -1,6 +1,6 @@
 /* =====================================================
-   JS/CANVAS-RENDERER.JS - VISUALIZATION ENGINE
-   ===================================================== */
+ * JS/CANVAS-RENDERER.JS - VISUALIZATION ENGINE
+ * ===================================================== */
 
 class CanvasRenderer {
     constructor(diskCanvasId, graphCanvasId, stateManager) {
@@ -9,6 +9,9 @@ class CanvasRenderer {
         this.diskCtx = this.diskCanvas.getContext('2d');
         this.graphCtx = this.graphCanvas.getContext('2d');
         this.state = stateManager;
+
+        // --- Get HTML element for head tracker ---
+        this.headTrackerElement = document.getElementById('headPositionTracker');
 
         // Canvas settings
         this.diskPadding = 60;
@@ -51,7 +54,41 @@ class CanvasRenderer {
         this.clearCanvases();
         this.renderDiskVisualization();
         this.renderPositionGraph();
+
+        // --- Update the HTML Head Position Tracker ---
+        this.updateHeadTrackerPosition();
     }
+
+    /**
+     * --- NEW FUNCTION ---
+     * Update the position of the HTML-based head tracker
+     * to match the canvas-drawn head.
+     */
+    updateHeadTrackerPosition() {
+        if (!this.headTrackerElement) return;
+
+        // Get all necessary values for calculation
+        const headPos = this.state.currentHeadPosition;
+        const maxTrack = this.state.maxTrackNumber;
+        const padding = this.diskPadding;
+        const canvasWidth = this.diskCanvas.width;
+        
+        // Calculate the width of the drawable disk area
+        const drawableWidth = canvasWidth - 2 * padding;
+
+        // Calculate the head's relative position (0.0 to 1.0)
+        const headPercent = maxTrack > 0 ? (headPos / maxTrack) : 0;
+
+        // Calculate the pixel offset within the drawable area
+        const pixelOffset = headPercent * drawableWidth;
+
+        // The final 'left' position is the canvas padding + the pixel offset
+        const finalPixelPosition = padding + pixelOffset;
+
+        // Set the 'left' style.
+        this.headTrackerElement.style.left = `${finalPixelPosition}px`;
+    }
+
 
     /**
      * Render disk scheduling visualization
@@ -59,10 +96,11 @@ class CanvasRenderer {
      */
     renderDiskVisualization() {
         const ctx = this.diskCtx;
+        // Calculate drawable width
         const width = this.diskCanvas.width - 2 * this.diskPadding;
         const height = this.diskHeight;
         const x = this.diskPadding;
-        const y = 30;
+        const y = 30; // Top padding for the head pointer
 
         // Draw disk bar
         this.drawDiskBar(ctx, x, y, width, height);
@@ -73,8 +111,9 @@ class CanvasRenderer {
         // Draw request dots
         this.drawRequestDots(ctx, x, y, width, height);
 
-        // Draw trace line
-        this.drawTraceLine(ctx, x, y, width, height);
+        // --- MODIFICATION: Trace line drawing removed ---
+        // this.drawTraceLine(ctx, x, y, width, height);
+        // --- END MODIFICATION ---
 
         // Draw head pointer
         this.drawHeadPointer(ctx, x, y, width, height);
@@ -82,8 +121,9 @@ class CanvasRenderer {
         // Draw axis labels
         this.drawAxisLabels(ctx, x, y, width, height);
 
-        // Draw legend
-        this.drawLegend(ctx);
+        // --- MODIFICATION: Legend drawing removed ---
+        // this.drawLegend(ctx);
+        // --- END MODIFICATION ---
     }
 
     /**
@@ -126,10 +166,11 @@ class CanvasRenderer {
     drawRequestDots(ctx, x, y, width, height) {
         const cy = y + height / 2;
         const dotRadius = 6;
+        const maxTrack = this.state.maxTrackNumber > 0 ? this.state.maxTrackNumber : 1;
 
         // Draw pending requests
         this.state.pendingRequests.forEach(pos => {
-            const cx = x + (pos / this.state.maxTrackNumber) * width;
+            const cx = x + (pos / maxTrack) * width;
             ctx.fillStyle = this.colors.pending;
             ctx.beginPath();
             ctx.arc(cx, cy, dotRadius, 0, Math.PI * 2);
@@ -143,7 +184,7 @@ class CanvasRenderer {
 
         // Draw serviced requests
         this.state.servicedRequests.forEach(pos => {
-            const cx = x + (pos / this.state.maxTrackNumber) * width;
+            const cx = x + (pos / maxTrack) * width;
             ctx.fillStyle = this.colors.serviced;
             ctx.beginPath();
             ctx.arc(cx, cy, dotRadius, 0, Math.PI * 2);
@@ -161,7 +202,7 @@ class CanvasRenderer {
     }
 
     /**
-     * Draw trace line showing head movement
+     * Draw trace line showing head movement (This function is no longer called)
      * @private
      */
     drawTraceLine(ctx, x, y, width, height) {
@@ -173,14 +214,16 @@ class CanvasRenderer {
         ctx.beginPath();
 
         const cy = y + height / 2;
+        const maxTrack = this.state.maxTrackNumber > 0 ? this.state.maxTrackNumber : 1;
+
 
         // Start from first position
-        let xPos = x + (this.traceHistory[0] / this.state.maxTrackNumber) * width;
+        let xPos = x + (this.traceHistory[0] / maxTrack) * width;
         ctx.moveTo(xPos, cy);
 
         // Draw line through all positions
         for (let i = 1; i < this.traceHistory.length; i++) {
-            xPos = x + (this.traceHistory[i] / this.state.maxTrackNumber) * width;
+            xPos = x + (this.traceHistory[i] / maxTrack) * width;
             ctx.lineTo(xPos, cy - 15);
             ctx.lineTo(xPos, cy + 15);
             ctx.lineTo(xPos, cy);
@@ -196,22 +239,26 @@ class CanvasRenderer {
      */
     drawHeadPointer(ctx, x, y, width, height) {
         const cy = y + height / 2;
-        const cx = x + (this.state.currentHeadPosition / this.state.maxTrackNumber) * width;
+        const maxTrack = this.state.maxTrackNumber > 0 ? this.state.maxTrackNumber : 1;
+        const cx = x + (this.state.currentHeadPosition / maxTrack) * width;
 
-        // Draw head triangle
-        ctx.fillStyle = this.colors.head;
-        ctx.beginPath();
-        ctx.moveTo(cx, y - 15);
-        ctx.lineTo(cx - 8, y - 30);
-        ctx.lineTo(cx + 8, y - 30);
-        ctx.closePath();
-        ctx.fill();
+        // --- MODIFICATION: Draw head triangle removed ---
+        // ctx.fillStyle = this.colors.head;
+        // ctx.beginPath();
+        // ctx.moveTo(cx, y - 15);
+        // ctx.lineTo(cx - 8, y - 30);
+        // ctx.lineTo(cx + 8, y - 30);
+        // ctx.closePath();
+        // ctx.fill();
+        // --- END MODIFICATION ---
 
         // Draw connection line
         ctx.strokeStyle = this.colors.head;
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(cx, y - 15);
+        // --- MODIFICATION: Line starts from the HTML box position ---
+        ctx.moveTo(cx, y - 15); // Starts slightly above the disk bar
+        // --- END MODIFICATION ---
         ctx.lineTo(cx, y + height + 15);
         ctx.stroke();
 
@@ -221,11 +268,13 @@ class CanvasRenderer {
         ctx.arc(cx, cy, 8, 0, Math.PI * 2);
         ctx.fill();
 
-        // Draw position label
-        ctx.fillStyle = this.colors.head;
-        ctx.font = 'bold 14px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(this.state.currentHeadPosition, cx, y - 35);
+        // --- MODIFICATION: Removed position label ---
+        // The HTML box now handles this.
+        // ctx.fillStyle = this.colors.head;
+        // ctx.font = 'bold 14px Arial';
+        // ctx.textAlign = 'center';
+        // ctx.fillText(this.state.currentHeadPosition, cx, y - 35);
+        // --- END MODIFICATION ---
     }
 
     /**
@@ -253,7 +302,7 @@ class CanvasRenderer {
     }
 
     /**
-     * Draw legend
+     * Draw legend (This function is no longer called)
      * @private
      */
     drawLegend(ctx) {
@@ -328,6 +377,7 @@ class CanvasRenderer {
     drawGraphGridSwapped(ctx, x, y, width, height) {
         ctx.strokeStyle = this.colors.gridLine;
         ctx.lineWidth = 1;
+        const maxTrack = this.state.maxTrackNumber > 0 ? this.state.maxTrackNumber : 1;
 
         // Vertical grid lines (for position intervals)
         const positionIntervals = 5;
@@ -340,13 +390,16 @@ class CanvasRenderer {
         }
 
         // Horizontal grid lines (for time intervals)
-        const timeIntervals = Math.min(this.state.allSteps.length, 15);
-        for (let i = 0; i <= timeIntervals; i++) {
-            const yPos = y + (height / timeIntervals) * i;
-            ctx.beginPath();
-            ctx.moveTo(x, yPos);
-            ctx.lineTo(x + width, yPos);
-            ctx.stroke();
+        const totalSteps = this.state.allSteps.length > 1 ? this.state.allSteps.length - 1 : 1;
+        const timeIntervals = Math.min(totalSteps, 15);
+        if (timeIntervals > 0) {
+            for (let i = 0; i <= timeIntervals; i++) {
+                const yPos = y + (height / timeIntervals) * i;
+                ctx.beginPath();
+                ctx.moveTo(x, yPos);
+                ctx.lineTo(x + width, yPos);
+                ctx.stroke();
+            }
         }
     }
 
@@ -358,13 +411,13 @@ class CanvasRenderer {
         ctx.strokeStyle = this.colors.border;
         ctx.lineWidth = 2;
 
-        // X-axis (left side, for position)
+        // Y-axis (left side)
         ctx.beginPath();
         ctx.moveTo(x, y);
         ctx.lineTo(x, y + height);
         ctx.stroke();
 
-        // Y-axis (bottom side, for time)
+        // X-axis (bottom side)
         ctx.beginPath();
         ctx.moveTo(x, y + height);
         ctx.lineTo(x + width, y + height);
@@ -381,14 +434,18 @@ class CanvasRenderer {
         ctx.strokeStyle = this.colors.pending;
         ctx.lineWidth = 2;
         ctx.beginPath();
+        
+        const totalSteps = this.state.allSteps.length > 1 ? this.state.allSteps.length - 1 : 1;
+        const maxTrack = this.state.maxTrackNumber > 0 ? this.state.maxTrackNumber : 1;
+
 
         // Plot each step - Time on Y-axis (going DOWN), Position on X-axis
         for (let i = 0; i <= this.state.currentStepIndex && i < this.state.allSteps.length; i++) {
             const step = this.state.allSteps[i];
             // X position based on head position (0 to maxTrack)
-            const xPos = x + (step.headPosition / this.state.maxTrackNumber) * width;
+            const xPos = x + (step.headPosition / maxTrack) * width;
             // Y position based on time step (going downward)
-            const yPos = y + (i / Math.max(1, this.state.allSteps.length - 1)) * height;
+            const yPos = y + (i / totalSteps) * height;
 
             if (i === 0) {
                 ctx.moveTo(xPos, yPos);
@@ -401,8 +458,8 @@ class CanvasRenderer {
 
         // Draw current point
         const currentStep = this.state.getCurrentStep();
-        const currentX = x + (currentStep.headPosition / this.state.maxTrackNumber) * width;
-        const currentY = y + (this.state.currentStepIndex / Math.max(1, this.state.allSteps.length - 1)) * height;
+        const currentX = x + (currentStep.headPosition / maxTrack) * width;
+        const currentY = y + (this.state.currentStepIndex / totalSteps) * height;
 
         ctx.fillStyle = this.colors.pending;
         ctx.beginPath();
@@ -422,14 +479,15 @@ class CanvasRenderer {
     drawGraphAxisLabelsSwapped(ctx, x, y, width, height) {
         ctx.fillStyle = this.colors.text;
         ctx.font = '12px Arial';
+        const maxTrack = this.state.maxTrackNumber > 0 ? this.state.maxTrackNumber : 1;
 
         // X-axis label (position - horizontal)
         ctx.textAlign = 'center';
-        ctx.fillText('Disk Position', x + width / 2, y + height + 30);
+        ctx.fillText('Disk Position', x + width / 2, y + height + 40); // Increased padding
 
         // Y-axis label (time - vertical)
         ctx.save();
-        ctx.translate(x - 30, y + height / 2);
+        ctx.translate(x - 40, y + height / 2); // Increased padding
         ctx.rotate(-Math.PI / 2);
         ctx.textAlign = 'center';
         ctx.fillText('Time (Steps)', 0, 0);
@@ -438,24 +496,27 @@ class CanvasRenderer {
         // X-axis values (positions: 0, maxTrack)
         ctx.textAlign = 'center';
         ctx.font = '10px Arial';
-        ctx.fillText('0', x, y + height + 15);
+        ctx.fillText('0', x, y + height + 20); // Increased padding
         ctx.textAlign = 'center';
-        ctx.fillText(this.state.maxTrackNumber, x + width, y + height + 15);
+        ctx.fillText(this.state.maxTrackNumber, x + width, y + height + 20); // Increased padding
 
         // X-axis intermediate values
         for (let i = 1; i <= 4; i++) {
             const xPos = x + (width / 5) * i;
-            const posValue = Math.round((i / 5) * this.state.maxTrackNumber);
-            ctx.fillText(posValue, xPos, y + height + 15);
+            const posValue = Math.round((i / 5) * maxTrack);
+            ctx.fillText(posValue, xPos, y + height + 20); // Increased padding
         }
 
         // Y-axis values (time: 0 to max steps)
         ctx.textAlign = 'right';
-        const timeIntervals = Math.min(this.state.allSteps.length, 8);
-        for (let i = 0; i <= timeIntervals; i++) {
-            const yPos = y + (height / timeIntervals) * i;
-            const stepValue = Math.round((i / timeIntervals) * (this.state.allSteps.length - 1));
-            ctx.fillText(stepValue, x - 8, yPos + 3);
+        const totalSteps = this.state.allSteps.length > 1 ? this.state.allSteps.length - 1 : 1;
+        const timeIntervals = Math.min(totalSteps, 8);
+        if (timeIntervals > 0) {
+            for (let i = 0; i <= timeIntervals; i++) {
+                const yPos = y + (height / timeIntervals) * i;
+                const stepValue = Math.round((i / timeIntervals) * totalSteps);
+                ctx.fillText(stepValue, x - 8, yPos + 3);
+            }
         }
     }
 
@@ -463,16 +524,23 @@ class CanvasRenderer {
      * Update trace history
      */
     updateTraceHistory() {
-        const currentStep = this.state.getCurrentStep();
-        if (this.traceHistory.length === 0 || this.traceHistory[this.traceHistory.length - 1] !== currentStep.headPosition) {
-            this.traceHistory.push(currentStep.headPosition);
+        // --- MODIFICATION: This logic is now correct ---
+        // It rebuilds the trace from step 0 up to the current step.
+        // This fixes the "Step Backward" glitch.
+        this.traceHistory = [];
+        for (let i = 0; i <= this.state.currentStepIndex; i++) {
+            if (this.state.allSteps[i]) {
+                this.traceHistory.push(this.state.allSteps[i].headPosition);
+            }
         }
+        // --- END MODIFICATION ---
     }
 
     /**
      * Reset trace history
      */
     resetTrace() {
+        // Only show the initial head position
         this.traceHistory = [this.state.initialHeadPosition];
     }
 
@@ -481,10 +549,18 @@ class CanvasRenderer {
      */
     handleResize() {
         const diskContainer = this.diskCanvas.parentElement;
-        this.diskCanvas.width = diskContainer.offsetWidth - 40;
+        if (diskContainer) {
+            // Use clientWidth for a more robust width calculation
+            this.diskCanvas.width = diskContainer.clientWidth;
+        }
         
         const graphContainer = this.graphCanvas.parentElement;
-        this.graphCanvas.width = graphContainer.offsetWidth - 40;
+         if (graphContainer) {
+            this.graphCanvas.width = graphContainer.clientWidth;
+        }
+        
+        // Re-render after resize
+        this.render();
     }
 }
 
@@ -492,3 +568,4 @@ class CanvasRenderer {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = CanvasRenderer;
 }
+

@@ -1,263 +1,263 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Interactive OS Disk Scheduling Algorithm Visualizer">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Interactive OS Disk Scheduling Algorithm Visualizer"
+    />
     <title>OS Disk Scheduling Simulator</title>
 
     <!-- CSS Files -->
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="css/layout.css">
-    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="CSS/styles.css" />
+    <link rel="stylesheet" href="CSS/layout.css" />
+    <link rel="stylesheet" href="CSS/animations.css" />
 
     <!-- External Libraries for PDF Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-</head>
-<body>
+  </head>
+  <body>
     <div class="app-container">
+      <!-- ========================
+            COLUMN 1: SIDEBAR (CONTROLS & INFO)
+            ======================== -->
+      <div class="sidebar">
+        <!-- Panel 1: Configuration (Visible at start) -->
+        <div id="config-panel">
+          <header class="control-panel">
+            <div class="header-title">
+              <h1>🖥️ OS Disk Scheduling</h1>
+              <p>Algorithm Visualizer</p>
+            </div>
 
-        <!-- ========================
-             SIDEBAR (COLUMN 1)
-             Contains all Controls and Info
-             ======================== -->
-        <div class="sidebar">
+            <div class="control-grid">
+              <!-- Algorithm Selection -->
+              <div class="control-group">
+                <label for="algorithmSelect">Algorithm:</label>
+                <select id="algorithmSelect">
+                  <option value="fcfs">FCFS (First Come First Serve)</option>
+                  <option value="sstf">SSTF (Shortest Seek Time First)</option>
+                  <option value="scan">SCAN (Elevator Algorithm)</option>
+                  <option value="cscan">C-SCAN (Circular SCAN)</option>
+                  <option value="look">LOOK</option>
+                  <option value="clook">C-LOOK (Circular LOOK)</option>
+                </select>
+              </div>
 
-            <!-- 1. CONTROLS (MOVED INSIDE) -->
-            <header class="control-panel">
-                <div class="header-title">
-                    <h1>🖥️ OS Disk Scheduling Simulator</h1>
-                    <p>Visualization of Disk Algorithms</p>
+              <!-- Direction (for SCAN/LOOK) - Initially hidden -->
+              <div class="control-group" id="directionGroup" style="display: none">
+                <label>Direction (for SCAN/LOOK):</label>
+                <div class="radio-group">
+                  <label class="radio-label">
+                    <input type="radio" name="direction" value="low" checked />
+                    Towards 0 (Low)
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" name="direction" value="high" />
+                    Towards Max (High)
+                  </label>
                 </div>
+              </div>
 
-                <div class="control-grid">
+              <!-- Parameters -->
+              <div class="control-group">
+                <label for="initialHeadPosition">Initial Head Position:</label>
+                <input
+                  type="number"
+                  id="initialHeadPosition"
+                  value="53"
+                  min="0"
+                  placeholder="e.g., 53"
+                />
+              </div>
+              <div class="control-group">
+                <label for="maxTrackNumber">Max Track Number:</label>
+                <input
+                  type="number"
+                  id="maxTrackNumber"
+                  value="199"
+                  min="10"
+                  placeholder="e.g., 199"
+                />
+              </div>
 
-                    <!-- =================================== -->
-                    <!-- STATE 1: CONFIGURATION (Visible)    -->
-                    <!-- =================================== -->
-                    <div id="config-panel">
-                        <!-- Row 1: Algorithm Selection & Parameters -->
-                        <div class="control-row">
-                            <div class="control-group">
-                                <label for="algorithmSelect">Algorithm:</label>
-                                <select id="algorithmSelect">
-                                    <option value="fcfs">FCFS (First Come First Serve)</option>
-                                    <option value="sstf">SSTF (Shortest Seek Time First)</option>
-                                    <option value="scan">SCAN (Elevator Algorithm)</option>
-                                    <option value="cscan">C-SCAN (Circular SCAN)</option>
-                                    <option value="look">LOOK</option>
-                                    <option value="clook">C-LOOK (Circular LOOK)</option>
-                                </select>
-                            </div>
+              <!-- Request Queue -->
+              <div class="control-group">
+                <label for="requestQueue">Request Queue (comma-separated):</label>
+                <input
+                  type="text"
+                  id="requestQueue"
+                  value="98, 183, 37, 122, 14, 124, 65, 67"
+                  placeholder="e.g., 98, 183, 37..."
+                />
+              </div>
 
-                            <div class="control-group">
-                                <label for="initialHeadPosition">Initial Head:</label>
-                                <input type="number" id="initialHeadPosition" value="53" min="0" placeholder="e.g., 53">
-                            </div>
+              <!-- Run Button -->
+              <button id="runBtn" class="btn btn-primary btn-full-width" title="Run the simulation">
+                <span class="btn-icon">▶️</span>
+                <span class="btn-text">Run Simulation</span>
+              </button>
+            </div>
+          </header>
+        </div>
 
-                            <div class="control-group">
-                                <label for="maxTrackNumber">Max Track:</label>
-                                <input type="number" id="maxTrackNumber" value="199" min="10" placeholder="e.g., 199">
-                            </div>
-                        </div>
+        <!-- Panel 2: Simulation (Visible after 'Run') -->
+        <div id="simulation-panel" style="display: none">
+          <!-- Simulation Header -->
+          <header class="control-panel">
+            <div class="header-title">
+              <h1>🖥️ Simulation</h1>
+              <p id="algorithmDescription">
+                FCFS: Serves requests in the order they arrive.
+              </p>
+            </div>
+          </header>
 
-                        <!-- Row 2: Request Queue & Direction -->
-                        <div class="control-row">
-                            <div class="control-group full-width">
-                                <label for="requestQueue">Request Queue (comma-separated):</label>
-                                <input type="text" id="requestQueue" value="98, 183, 37, 122, 14, 124, 65, 67" placeholder="e.g., 98, 183, 37...">
-                            </div>
-                            
-                            <div id="directionGroup" class="control-group direction-group" style="display: none;">
-                                <label>Direction (for SCAN/LOOK):</label>
-                                <div class="radio-group">
-                                    <label class="radio-label">
-                                        <input type="radio" name="direction" value="low" checked>
-                                        Towards 0 (Low)
-                                    </label>
-                                    <label class="radio-label">
-                                        <input type="radio" name="direction" value="high">
-                                        Towards Max (High)
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
+          <!-- Animation Controls -->
+          <div class="info-section">
+            <h3>Animation Controls</h3>
+            <div class="button-row">
+              <button id="playPauseBtn" class="btn btn-primary" title="Play/Pause Animation">
+                <span class="btn-icon">⏸️</span>
+                <span class="btn-text">Pause</span>
+              </button>
+              <button id="stepBackwardBtn" class="btn btn-secondary" title="Step Backward">
+                <span class="btn-icon">⏪</span>
+                <span class="btn-text">Step Back</span>
+              </button>
+              <button id="stepForwardBtn" class="btn btn-secondary" title="Step Forward">
+                <span class="btn-icon">⏩</span>
+                <span class="btn-text">Step Fwd</span>
+              </button>
+              <button id="resetBtn" class="btn btn-secondary" title="Reset Animation">
+                <span class="btn-icon">🔄</span>
+                <span class="btn-text">Reset Anim</span>
+              </button>
+            </div>
+            <div class="speed-control-group">
+              <label for="speedSlider">Animation Speed:</label>
+              <div class="speed-slider-container">
+                <span class="speed-label">Slow</span>
+                <input
+                  type="range"
+                  id="speedSlider"
+                  min="1"
+                  max="10"
+                  value="5"
+                  class="slider"
+                />
+                <span class="speed-label">Fast</span>
+              </div>
+            </div>
+          </div>
 
-                        <!-- Run Button -->
-                        <div class="control-row">
-                            <!-- NOTE: This 'runBtn' ID is now handled by main.js -->
-                            <button id="runBtn" class="btn btn-primary" title="Run the simulation" style="width: 100%;">
-                                <span class="btn-icon">▶️</span>
-                                <span class="btn-text">Run Simulation</span>
-                            </button>
-                        </div>
-                    </div>
+          <!-- Pending Queue -->
+          <div class="info-section" id="pendingQueueContainer">
+            <h3>⏳ Pending Queue</h3>
+            <div class="queue-container">
+              <div id="pendingQueue" class="queue-list">
+                <span class="queue-empty">No requests loaded</span>
+              </div>
+            </div>
+          </div>
 
-                    <!-- =================================== -->
-                    <!-- STATE 2: SIMULATION (Hidden)        -->
-                    <!-- =================================== -->
-                    <div id="simulation-panel" style="display: none;">
+          <!-- Reset/Export Buttons -->
+          <div class="info-section">
+            <button id="exportBtn" class="btn btn-success btn-full-width" title="Export to PDF">
+              <span class="btn-icon">📄</span>
+              <span class="btn-text">Export PDF</span>
+            </button>
+            <button id="resetAlgorithmBtn" class="btn btn-danger btn-full-width" title="Reset Simulation">
+              <span class="btn-icon">🔄</span>
+              <span class="btn-text">Reset Algorithm</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- ========================
+            END OF SIDEBAR (COLUMN 1)
+            ======================== -->
 
-                        <!-- Row 3: Animation Controls -->
-                        <div class="control-row button-row">
-                            <!-- These buttons are now handled by controller.js -->
-                            <button id="playPauseBtn" class="btn btn-primary" title="Play/Pause Animation">
-                                <span class="btn-icon">⏸️</span>
-                                <span class="btn-text">Pause</span>
-                            </button>
-
-                            <button id="stepBackwardBtn" class="btn btn-secondary" title="Step Backward">
-                                <span class="btn-icon">⏪</span>
-                                <span class="btn-text">Step Back</span>
-                            </button>
-
-                            <button id="stepForwardBtn" class="btn btn-secondary" title="Step Forward">
-                                <span class="btn-icon">⏩</span>
-                                <span class="btn-text">Step Forward</span>
-                            </button>
-
-                            <button id="resetBtn" class="btn btn-secondary" title="Reset Animation to Step 0">
-                                <span class="btn-icon">🔄</span>
-                                <span class="btn-text">Reset Anim</span>
-                            </button>
-                        </div>
-
-                        <!-- Row 4: Speed Control & Export -->
-                        <div class="control-row">
-                            <div class="speed-control-group">
-                                <label for="speedSlider">Animation Speed:</label>
-                                <div class="speed-slider-container">
-                                    <span class="speed-label">Slow</span>
-                                    <input type="range" id="speedSlider" min="1" max="10" value="5" class="slider">
-                                    <span class="speed-label">Fast</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="control-row">
-                            <button id="exportBtn" class="btn btn-success" title="Export to PDF" style="width: 100%;">
-                                <span class="btn-icon">📄</span>
-                                <span class="btn-text">Export PDF</span>
-                            </button>
-                        </div>
-                        <div class="control-row">
-                            <!-- This new button is handled by main.js -->
-                            <button id="resetAlgorithmBtn" class="btn btn-danger" title="Change settings and run a new simulation" style="width: 100%;">
-                                <span class="btn-icon">🛠️</span>
-                                <span class="btn-text">Reset Algorithm</span>
-                            </button>
-                        </div>
-
-                        <!-- 2. INFO PANEL (MOVED INSIDE) -->
-                        <aside class="information-panel">
-                            <div class="info-section">
-                                <h3>📊 Live Statistics</h3>
-                                <div class="stats-grid">
-                                    <div class="stat-box">
-                                        <span class="stat-label">Current Head Position</span>
-                                        <span class="stat-value" id="currentHeadPosition">0</span>
-                                    </div>
-                                    <div class="stat-box">
-                                        <span class="stat-label">Total Head Movement</span>
-                                        <span class="stat-value" id="totalHeadMovement">0</span>
-                                    </div>
-                                    <div class="stat-box">
-                                        <span class="stat-label">Seeks Count</span>
-                                        <span class="stat-value" id="seeksCount">0</span>
-                                    </div>
-                                    <div class="stat-box">
-                                        <span class="stat-label">Average Seek Time</span>
-                                        <span class="stat-value" id="averageSeekTime">0.00</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Next Target -->
-                            <div class="info-section">
-                                <h3>🎯 Next Target</h3>
-                                <div class="next-target-box">
-                                    <span id="nextTargetDisplay" class="next-target">-</span>
-                                </div>
-                            </div>
-
-                            <!-- Pending Queue -->
-                            <div class="info-section">
-                                <h3>⏳ Pending Queue</h3>
-                                <div class="queue-container">
-                                    <div id="pendingQueue" class="queue-list">
-                                        <span class="queue-empty">No requests loaded</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Serviced Order -->
-                            <div class="info-section">
-                                <h3>✅ Serviced Order</h3>
-                                <div class="queue-container">
-                                    <div id="servicedQueue" class="queue-list">
-                                        <span class="queue-empty">No services yet</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </aside>
-                    </div> <!-- End of simulation-panel -->
-                </div>
-            </header>
-
-            <!-- NOTE: The <aside class="information-panel"> was moved up -->
-
-        </div> 
-        <!-- ========================
-             END OF SIDEBAR (COLUMN 1)
-             ======================== -->
-
-
-        <!-- ========================
-             VISUALIZATION PANEL (COLUMN 2)
-             ======================== -->
+      <!-- ========================
+            COLUMN 2: MAIN VISUALIZATION AREA
+            ======================== -->
+      <div class="main-content">
         <section class="visualization-panel">
-            <div class="visualization-header">
-                <h2>Disk Scheduling Visualization</h2>
-                <p id="algorithmDescription" class="algorithm-description">
-                    FCFS: Serves requests in the order they arrive, without optimization.
-                </p>
+          
+          <!-- Live Statistics Card (Now includes Next Target) -->
+          <div class="info-section">
+            <div class="stats-grid">
+              <!-- Stat Box 1 -->
+              <div class="stat-box">
+                <span class="stat-label">Total Head Movement</span>
+                <span class="stat-value" id="totalHeadMovement">0</span>
+              </div>
+              <!-- Stat Box 2 -->
+              <div class="stat-box">
+                <span class="stat-label">Seeks Count</span>
+                <span class="stat-value" id="seeksCount">0</span>
+              </div>
+              <!-- Stat Box 3 -->
+              <div class="stat-box">
+                <span class="stat-label">Average Seek Time</span>
+                <span class="stat-value" id="averageSeekTime">0.00</span>
+              </div>
+              <!-- Stat Box 4 (Moved from sidebar) -->
+              <div class="stat-box" id="nextTargetContainer">
+                <span class="stat-label">Next Target</span>
+                <span class="stat-value" id="nextTargetDisplay">-</span>
+              </div>
             </div>
+          </div>
 
-            <!-- Disk Representation -->
-            <div class="disk-container">
-                <canvas id="diskCanvas" class="disk-canvas" width="1000" height="150"></canvas>
+          <!-- Head Position Tracker (Floats above canvas) -->
+          <div class="head-position-container">
+            <div id="headPositionTracker" class="stat-box">
+              <span class="stat-label">Current Head Position</span>
+              <span class="stat-value" id="currentHeadPosition">0</span>
             </div>
+          </div>
 
-            <!-- Current Action Text -->
-            <div class="action-text-container">
-                <p id="currentActionText" class="action-text">
-                    Click "Run Simulation" to start
-                </p>
-            </div>
+          <!-- Disk Representation -->
+          <div class="disk-container">
+            <canvas
+              id="diskCanvas"
+              class="disk-canvas"
+              width="1000"
+              height="150"
+            ></canvas>
+          </div>
 
-            <!-- Position vs. Time Graph -->
-            <div class="graph-container">
-                <h3>Position vs. Time Graph</h3>
-                <canvas id="graphCanvas" class="graph-canvas" width="1000" height="300"></canvas>
-            </div>
+          <!-- Position vs. Time Graph -->
+          <div class="graph-container">
+            <h3>Position vs. Time Graph</h3>
+            <canvas
+              id="graphCanvas"
+              class="graph-canvas"
+              width="1000"
+              height="300"
+            ></canvas>
+          </div>
 
-            <!-- Step Information -->
-            <div class="step-info">
-                <span id="currentStepDisplay">Step: 0 / 0</span>
-            </div>
+          <!-- Step Information -->
+          <div class="step-info">
+            <span id="currentStepDisplay">Step: 0 / 0</span>
+          </div>
         </section>
-        <!-- ========================
-             END OF VISUALIZATION (COLUMN 2)
-             ======================== -->
-        
-    </div> 
+      </div>
+      <!-- ========================
+            END OF VISUALIZATION (COLUMN 2)
+            ======================== -->
+    </div>
     <!-- ========================
          END OF APP-CONTAINER
          ======================== -->
 
     <!-- ========================
-         JAVASCRIPT FILES
-         ======================== -->
+        JAVASCRIPT FILES
+        ======================== -->
 
     <!-- Phase 1: State Management -->
     <script src="Javascript/state-manager.js"></script>
@@ -281,13 +281,6 @@
 
     <!-- Phase 6: Main Entry Point -->
     <script src="Javascript/main.js"></script>
-
-    <!-- 
-      MODIFICATION:
-      - REMOVED entire script block.
-      - All logic is now handled in main.js and controller.js
-    -->
-
-</body>
+  </body>
 </html>
 
