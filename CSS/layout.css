@@ -172,7 +172,8 @@
   display: flex;
   flex-direction: column;
   padding: 1rem;
-  overflow: hidden; /* Hide canvas overflow */
+  overflow: auto; /* Hide canvas overflow */
+  resize: both;
 }
 
 .disk-container {

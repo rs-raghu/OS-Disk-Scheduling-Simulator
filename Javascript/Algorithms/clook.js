@@ -1,54 +1,58 @@
 /* =====================================================
-   JS/ALGORITHMS/CLOOK.JS - C-LOOK (CIRCULAR LOOK) ALGORITHM
-   ===================================================== */
+ * JS/ALGORITHMS/CLOOK.JS - C-LOOK (CIRCULAR LOOK) ALGORITHM
+ * -----------------------------------------------------
+ * A more efficient version of C-SCAN. The head moves
+ * to the last request in one direction (e.g., high),
+ * then "jumps" to the first request in the other "half"
+ * (e.g., the lowest request) and continues moving
+ * in the *same* direction.
+ * ===================================================== */
 
 /**
- * C-LOOK (Circular LOOK) Algorithm
- * Similar to C-SCAN but only goes as far as the last request in each direction
- * Provides circular motion without going all the way to disk ends
- * Characteristics: Most efficient among scanning algorithms
+ * Implements the C-LOOK (Circular LOOK) algorithm.
+ * Characteristics: Efficient and provides good, uniform wait times.
  */
 class CLOOK extends AlgorithmBase {
+
     /**
-     * Execute C-LOOK algorithm
-     * @returns {Array<number>} Sequence of disk positions visited
+     * Gets the description for the C-LOOK algorithm.
+     * @static
+     * @returns {string} The algorithm's description.
      */
-    execute() {
-        const sequence = this.initializeSequence();
-        let currentPos = this.initialPosition;
-
-        // Get requests on left and right
-        const leftRequests = this.getRequestsLessThan(currentPos, true);   // Descending order
-        const rightRequests = this.getRequestsGreaterThan(currentPos, true); // Ascending order
-
-        // Check if current position itself is a request
-        const currentIsRequest = this.requests.includes(currentPos);
-        if (currentIsRequest && rightRequests.length === 0 && leftRequests.length > 0) {
-            // If only left requests exist, go left
-            if (leftRequests.length > 0) {
-                sequence.push(...leftRequests);
-            }
-        } else {
-            // C-LOOK: Always process right requests first
-            if (rightRequests.length > 0) {
-                sequence.push(...rightRequests);
-            }
-
-            // Then wrap around and process left requests
-            if (leftRequests.length > 0) {
-                sequence.push(...leftRequests);
-            }
-        }
-
-        return sequence;
+    static get description() {
+        return 'C-LOOK (Circular LOOK): A "smarter" C-SCAN. The head "jumps" from the last request in one direction to the first in the other.';
     }
 
     /**
-     * Get algorithm description
-     * @returns {string}
+     * Executes the C-LOOK (Circular) algorithm.
+     * @returns {Array<number>} The sequence of disk positions visited.
      */
-    getDescription() {
-        return 'C-LOOK: Circular LOOK. Combines C-SCAN and LOOK: goes to the farthest request in one direction, then jumps to the farthest request in the other direction. Most efficient among circular algorithms.';
+    execute() {
+        const sequence = this.initializeSequence(); // [initialPosition]
+
+        // 1. Get requests at or to the right, sorted ascending
+        const rightRequests = this.getRequestsGreaterOrEqual(this.initialPosition, true);
+        
+        // 2. Get requests to the left, sorted ascending
+        const leftRequests = this.getRequestsLessThan(this.initialPosition, true).reverse(); // .reverse() to make ascending
+        
+        // Remove initial position if it was in the list
+        if (rightRequests[0] === this.initialPosition) {
+            rightRequests.shift();
+        }
+
+        // --- C-LOOK Logic (always moves high) ---
+
+        // 1. Service all requests to the right
+        sequence.push(...rightRequests);
+
+        // 2. If there are requests on the left, jump to them
+        // and service them in ascending order.
+        if (leftRequests.length > 0) {
+            sequence.push(...leftRequests);
+        }
+
+        return sequence;
     }
 }
 

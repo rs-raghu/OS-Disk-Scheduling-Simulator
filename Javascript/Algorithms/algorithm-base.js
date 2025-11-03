@@ -1,42 +1,58 @@
 /* =====================================================
-   JS/ALGORITHMS/ALGORITHM-BASE.JS - BASE ALGORITHM CLASS
-   ===================================================== */
+ * JS/ALGORITHMS/ALGORITHM-BASE.JS - BASE ALGORITHM CLASS
+ * -----------------------------------------------------
+ * This "abstract" base class defines the common interface
+ * and provides a suite of utility methods that all
+ * disk scheduling algorithms can inherit.
+ * ===================================================== */
 
 /**
- * Abstract base class for all disk scheduling algorithms
- * Defines the common interface and utility methods
+ * Abstract base class for all disk scheduling algorithms.
+ * @abstract
  */
 class AlgorithmBase {
     /**
-     * Initialize algorithm with parameters
-     * @param {number} initialPosition - Initial head position
-     * @param {number} maxTrack - Maximum track number
-     * @param {Array<number>} requests - Array of request positions
-     * @param {string} direction - Direction preference ('low' or 'high')
+     * Initializes the algorithm with all necessary parameters.
+     * @param {number} initialPosition - The starting position of the disk head.
+     * @param {number} maxTrack - The maximum track number on the disk.
+     * @param {Array<number>} requests - A clone of the request queue.
+     * @param {string} [direction='low'] - The initial direction ('low' or 'high').
      */
     constructor(initialPosition, maxTrack, requests, direction = 'low') {
+        /** @type {number} */
         this.initialPosition = initialPosition;
+        /** @type {number} */
         this.maxTrack = maxTrack;
-        this.requests = [...requests]; // Clone array to avoid mutations
+        /** @type {Array<number>} */
+        this.requests = [...requests]; // Clone array to prevent mutation of state
+        /** @type {string} */
         this.direction = direction;
         
-        // Validation
+        // Perform initial validation
         this.validateInput();
     }
 
     /**
-     * Validate input parameters
+     * Provides a default description. Subclasses should override this.
+     * @static
+     * @returns {string} The algorithm's description.
+     */
+    static get description() {
+        return 'A disk scheduling algorithm.';
+    }
+
+    /**
+     * Validates the constructor inputs.
      * @private
+     * @throws {Error} if any parameter is invalid.
      */
     validateInput() {
         if (this.requests.length === 0) {
             throw new Error('Request queue cannot be empty');
         }
-
         if (this.initialPosition < 0 || this.initialPosition > this.maxTrack) {
             throw new Error(`Initial position must be between 0 and ${this.maxTrack}`);
         }
-
         for (const req of this.requests) {
             if (req < 0 || req > this.maxTrack) {
                 throw new Error(`Request position ${req} is out of range [0, ${this.maxTrack}]`);
@@ -45,18 +61,21 @@ class AlgorithmBase {
     }
 
     /**
-     * Execute algorithm and return sequence
-     * Must be implemented by subclasses
-     * @returns {Array<number>} Sequence of positions visited
+     * Executes the algorithm and returns the sequence of visited tracks.
+     * **This method must be implemented by all subclasses.**
+     * @returns {Array<number>} An array of track numbers in the order they were visited.
+     * @abstract
      */
     execute() {
         throw new Error('execute() must be implemented by subclass');
     }
 
+    // --- UTILITY METHODS (for use by subclasses) ---
+
     /**
-     * Calculate total head movement for a sequence
-     * @param {Array<number>} sequence - Sequence of positions
-     * @returns {number} Total movement distance
+     * Calculates the total head movement for a given sequence.
+     * @param {Array<number>} sequence - The sequence of visited positions.
+     * @returns {number} The total head movement (sum of all seek distances).
      */
     calculateTotalMovement(sequence) {
         let total = 0;
@@ -67,18 +86,18 @@ class AlgorithmBase {
     }
 
     /**
-     * Get sorted requests in ascending order
-     * @returns {Array<number>} Sorted requests
+     * Returns a new array of requests sorted in ascending order.
+     * @returns {Array<number>}
      */
     getSortedRequests() {
         return [...this.requests].sort((a, b) => a - b);
     }
 
     /**
-     * Get requests less than current position
-     * @param {number} currentPos - Current position
-     * @param {boolean} sorted - Return sorted (default true)
-     * @returns {Array<number>} Requests less than currentPos
+     * Gets requests less than the current position.
+     * @param {number} currentPos - The current head position.
+     * @param {boolean} [sorted=true] - If true, sorts descending (b-a) to find the nearest request first.
+     * @returns {Array<number>}
      */
     getRequestsLessThan(currentPos, sorted = true) {
         let result = this.requests.filter(req => req < currentPos);
@@ -89,10 +108,10 @@ class AlgorithmBase {
     }
 
     /**
-     * Get requests greater than or equal to current position
-     * @param {number} currentPos - Current position
-     * @param {boolean} sorted - Return sorted (default true)
-     * @returns {Array<number>} Requests >= currentPos
+     * Gets requests greater than or equal to the current position.
+     * @param {number} currentPos - The current head position.
+     * @param {boolean} [sorted=true] - If true, sorts ascending (a-b) to find the nearest request first.
+     * @returns {Array<number>}
      */
     getRequestsGreaterOrEqual(currentPos, sorted = true) {
         let result = this.requests.filter(req => req >= currentPos);
@@ -101,12 +120,12 @@ class AlgorithmBase {
         }
         return result;
     }
-
+    
     /**
-     * Get requests greater than current position
-     * @param {number} currentPos - Current position
-     * @param {boolean} sorted - Return sorted (default true)
-     * @returns {Array<number>} Requests > currentPos
+     * Gets requests strictly greater than the current position.
+     * @param {number} currentPos - The current head position.
+     * @param {boolean} [sorted=true] - If true, sorts ascending (a-b) to find the nearest request first.
+     * @returns {Array<number>}
      */
     getRequestsGreaterThan(currentPos, sorted = true) {
         let result = this.requests.filter(req => req > currentPos);
@@ -117,10 +136,10 @@ class AlgorithmBase {
     }
 
     /**
-     * Get requests less than or equal to current position
-     * @param {number} currentPos - Current position
-     * @param {boolean} sorted - Return sorted (default true)
-     * @returns {Array<number>} Requests <= currentPos
+     * Gets requests less than or equal to the current position.
+     * @param {number} currentPos - The current head position.
+     * @param {boolean} [sorted=true] - If true, sorts descending (b-a) to find the nearest request first.
+     * @returns {Array<number>}
      */
     getRequestsLessOrEqual(currentPos, sorted = true) {
         let result = this.requests.filter(req => req <= currentPos);
@@ -131,10 +150,10 @@ class AlgorithmBase {
     }
 
     /**
-     * Find closest request to current position
-     * @param {number} currentPos - Current position
-     * @param {Array<number>} available - Available requests (default: all)
-     * @returns {number|null} Closest request or null if none available
+     * Finds the request closest to the current position from a list.
+     * @param {number} currentPos - The current head position.
+     * @param {Array<number>} [available=null] - The list of requests to check. Defaults to all requests.
+     * @returns {number|null} The closest request, or null if the list is empty.
      */
     findClosestRequest(currentPos, available = null) {
         const requestsToCheck = available || this.requests;
@@ -148,75 +167,40 @@ class AlgorithmBase {
     }
 
     /**
-     * Get description of algorithm
-     * @returns {string} Algorithm description
-     */
-    getDescription() {
-        throw new Error('getDescription() must be implemented by subclass');
-    }
-
-    /**
-     * Initialize sequence with starting position
-     * @returns {Array<number>} Sequence with starting position
+     * Initializes the sequence array with the starting position.
+     * @returns {Array<number>} A new sequence array containing only the initial position.
      */
     initializeSequence() {
         return [this.initialPosition];
     }
 
     /**
-     * Verify sequence completeness
-     * @param {Array<number>} sequence - Sequence to verify
-     * @returns {boolean} True if all requests are in sequence
+     * Verifies that all original requests were visited in the final sequence.
+     * @param {Array<number>} sequence - The generated sequence to verify.
+     * @returns {boolean} True if all requests are present.
      */
     verifySequence(sequence) {
         const visitedRequests = sequence.filter(pos => this.requests.includes(pos));
-        return visitedRequests.length === this.requests.length;
+        // Use Set to handle potential duplicates in sequence
+        return new Set(visitedRequests).size === this.requests.length;
     }
 
     /**
-     * Remove duplicate consecutive positions from sequence
-     * @param {Array<number>} sequence - Original sequence
-     * @returns {Array<number>} Sequence with no consecutive duplicates
-     */
-    removeDuplicatePositions(sequence) {
-        if (sequence.length <= 1) return sequence;
-
-        return sequence.reduce((result, current) => {
-            if (result.length === 0 || result[result.length - 1] !== current) {
-                result.push(current);
-            }
-            return result;
-        }, []);
-    }
-
-    /**
-     * Create a deep copy of requests array
-     * @returns {Array<number>} Copy of requests
+     * Creates a deep copy of the original requests array.
+     * @returns {Array<number>} A new array.
      */
     cloneRequests() {
         return [...this.requests];
     }
 
     /**
-     * Remove request from array
-     * @param {Array<number>} array - Array to modify
-     * @param {number} request - Request to remove
-     * @returns {Array<number>} Modified array
+     * Removes a specific request from an array.
+     * @param {Array<number>} array - The array to modify (e.g., a pending queue).
+     * @param {number} request - The request to remove.
+     * @returns {Array<number>} A new array with the request removed.
      */
     removeRequest(array, request) {
         return array.filter(r => r !== request);
-    }
-
-    /**
-     * Format algorithm info for logging
-     * @returns {string} Formatted info
-     */
-    getInfo() {
-        return `Algorithm: ${this.constructor.name}
-Initial Position: ${this.initialPosition}
-Max Track: ${this.maxTrack}
-Requests: ${this.requests.join(', ')}
-Direction: ${this.direction}`;
     }
 }
 

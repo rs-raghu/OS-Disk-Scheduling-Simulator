@@ -1,46 +1,52 @@
 /* =====================================================
-   JS/ALGORITHMS/SSTF.JS - SHORTEST SEEK TIME FIRST
-   ===================================================== */
+ * JS/ALGORITHMS/SSTF.JS - SHORTEST SEEK TIME FIRST
+ * -----------------------------------------------------
+ * This algorithm is a greedy algorithm that selects
+ * the request with the minimum seek time (closest
+ * track) from the current head position.
+ * ===================================================== */
 
 /**
- * SSTF (Shortest Seek Time First) Algorithm
- * Always services the request closest to current head position
- * Characteristics: Reduces head movement, but can cause starvation
+ * Implements the SSTF (Shortest Seek Time First) algorithm.
+ * Characteristics: Reduces average seek time, but can lead
+ * to "starvation" of requests that are far from the head.
  */
 class SSTF extends AlgorithmBase {
+
     /**
-     * Execute SSTF algorithm
-     * @returns {Array<number>} Sequence of disk positions visited
+     * Gets the description for the SSTF algorithm.
+     * @static
+     * @returns {string} The algorithm's description.
+     */
+    static get description() {
+        return 'SSTF (Shortest Seek Time First): Always serves the request closest to the current head position. Efficient, but can cause starvation.';
+    }
+
+    /**
+     * Executes the SSTF algorithm.
+     * @returns {Array<number>} The sequence of disk positions visited.
      */
     execute() {
-        const sequence = this.initializeSequence();
+        const sequence = this.initializeSequence(); // [initialPosition]
         const remaining = this.cloneRequests();
         let currentPos = this.initialPosition;
 
         // Continue until all requests are served
         while (remaining.length > 0) {
-            // Find the closest request to current position
+            // Find the request closest to the current head position
             const closest = this.findClosestRequest(currentPos, remaining);
             
             // Move to that request
             sequence.push(closest);
             
-            // Update current position
+            // Update the current position for the next search
             currentPos = closest;
             
-            // Remove the serviced request from remaining
+            // Remove the serviced request from the pending list
             remaining.splice(remaining.indexOf(closest), 1);
         }
 
         return sequence;
-    }
-
-    /**
-     * Get algorithm description
-     * @returns {string}
-     */
-    getDescription() {
-        return 'SSTF: Shortest Seek Time First. Always services the request closest to current head position. Reduces head movement but may cause starvation.';
     }
 }
 

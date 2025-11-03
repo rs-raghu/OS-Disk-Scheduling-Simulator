@@ -6,25 +6,18 @@
     <meta name="description" content="Interactive OS Disk Scheduling Algorithm Visualizer">
     <title>OS Disk Scheduling Simulator</title>
 
-    <!-- CSS Files -->
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/animations.css">
     
-    <!-- External Libraries for PDF Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
     <div class="app-container">
 
-        <!-- ========================
-              SIDEBAR (COLUMN 1)
-              Contains all Controls and Info
-              ======================== -->
         <div class="sidebar">
 
-            <!-- 1. CONTROLS -->
             <header class="control-panel">
                 <div class="header-title">
                     <h1>OS Disk Scheduling [23BAI0092]</h1>
@@ -33,11 +26,7 @@
 
                 <div class="control-grid">
 
-                    <!-- =================================== -->
-                    <!-- STATE 1: CONFIGURATION (Visible)    -->
-                    <!-- =================================== -->
                     <div id="config-panel">
-                        <!-- Row 1: Algorithm Selection & Parameters -->
                         <div class="control-row">
                             <div class="control-group">
                                 <label for="algorithmSelect">Algorithm:</label>
@@ -63,7 +52,6 @@
                             </div>
                         </div>
 
-                        <!-- Row 2: Request Queue & Direction -->
                         <div class="control-row">
                             <div class="control-group full-width">
                                 <label for="requestQueue">Request Queue (comma-separated):</label>
@@ -85,40 +73,29 @@
                             </div>
                         </div>
 
-                        <!-- Run Button -->
                         <div class="control-row">
                             <button id="runSimulationBtn" class="btn btn-primary" title="Run the simulation" style="width: 100%;">
                                 <span class="btn-text">Run Simulation</span>
                             </button>
                         </div>
-                    </div>
+                    </div> <div id="simulation-panel" style="display: none;">
 
-                    <!-- =================================== -->
-                    <!-- STATE 2: SIMULATION (Hidden)        -->
-                    <!-- =================================== -->
-                    <div id="simulation-panel" style="display: none;">
-
-                        <!-- Row 3: Animation Controls -->
                         <div class="control-row button-row">
                             <button id="playPauseBtn" class="btn btn-primary" title="Play/Pause Animation">
                                 <span class="btn-icon">⏸️</span>
                                 <span class="btn-text">Pause</span>
                             </button>
-
                             <button id="stepBackwardBtn" class="btn btn-secondary" title="Step Backward">
                                 <span class="btn-text">Step Back</span>
                             </button>
-
                             <button id="stepForwardBtn" class="btn btn-secondary" title="Step Forward">
                                 <span class="btn-text">Step Forward</span>
                             </button>
-
                             <button id="resetBtn" class="btn btn-secondary" title="Reset Animation to Step 0">
                                 <span class="btn-text">Reset Animation</span>
                             </button>
                         </div>
 
-                        <!-- Row 4: Speed Control & Export -->
                         <div class="control-row">
                             <div class="speed-control-group">
                                 <label for="speedSlider">Animation Speed:</label>
@@ -131,12 +108,6 @@
                         </div>
                         
                         
-                        <!-- 
-                          --- MODIFICATION ---
-                          Moved the entire information panel INSIDE the simulation-panel div.
-                          Now it will show/hide correctly.
-                          --- END MODIFICATION ---
-                        -->
                         <aside class="information-panel">
                 
                             <div class="info-section">
@@ -148,15 +119,6 @@
                                 </div>
                             </div>
 
-                            <!-- <div class="info-section">
-                                <h3>⏳ Pending Queue</h3>
-                                <div class="queue-container">
-                                    <div id="pendingQueue" class="queue-list">
-                                        <span class="queue-empty">No requests loaded</span>
-                                    </div>
-                                </div>
-                            </div> -->
-
                             <div class="info-section">
                                 <h3>Executed Queue (Serviced)</h3>
                                 <div class="queue-container">
@@ -165,7 +127,6 @@
                                     </div>
                                 </div>
                             </div>
-
 
                         </aside>
 
@@ -179,29 +140,13 @@
                                 <span class="btn-text">Reset Algorithm</span>
                             </button>
                         </div>
-                        <!-- --- END OF MOVED SECTION --- -->
                         
-                    </div> <!-- End of simulation-panel -->
-                </div>
+                    </div> </div>
             </header>
             
-            <!-- 
-              NOTE: The <aside class="information-panel"> was here, but has been
-              moved up inside the #simulation-panel div.
-            -->
-
         </div> 
-        <!-- ========================
-              END OF SIDEBAR (COLUMN 1)
-              ======================== -->
-
-
-        <!-- ========================
-              VISUALIZATION PANEL (COLUMN 2)
-              ======================== -->
         <section class="visualization-panel">
 
-            <!-- Live Statistics Card -->
             <div class="card stats-card">
                 <div class="card-header">
                     <h3>📊 Live Statistics</h3>
@@ -230,12 +175,10 @@
                 </div>
             </div>
 
-            <!-- Disk Representation -->
             <div class="disk-container card">
                 <canvas id="diskCanvas" class="disk-canvas" width="1000" height="200"></canvas>
             </div>
 
-            <!-- Position vs. Time Graph -->
             <div class="graph-container card">
                 <div class="card-header">
                     <h3>Position vs. Time Graph</h3>
@@ -243,24 +186,13 @@
                 <canvas id="graphCanvas" class="graph-canvas" width="1000" height="300"></canvas>
             </div>
 
-            <!-- Step Information -->
             <div class="step-info">
                 <span id="currentStepDisplay">Step: 0 / 0</span>
             </div>
+            
             <div id="disk-tooltip"></div>
         </section>
-        <!-- ========================
-              END OF VISUALIZATION (COLUMN 2)
-              ======================== -->
-        
-    </div> 
-    <!-- ========================
-         END OF APP-CONTAINER
-         ======================== -->
-
-    <!-- ========================
-         JAVASCRIPT FILES
-         ======================== -->
+        </div> 
     <script src="Javascript/state-manager.js"></script>
     <script src="Javascript/canvas-renderer.js"></script>
     <script src="Javascript/Algorithms/algorithm-base.js"></script>
@@ -275,4 +207,3 @@
 
 </body>
 </html>
-

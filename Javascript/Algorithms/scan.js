@@ -1,51 +1,78 @@
 /* =====================================================
-   JS/ALGORITHMS/SCAN.JS - SCAN (ELEVATOR) ALGORITHM
-   ===================================================== */
+ * JS/ALGORITHMS/SCAN.JS - SCAN (ELEVATOR) ALGORITHM
+ * -----------------------------------------------------
+ * The head moves in one direction, servicing all
+ * requests in its path, until it hits the end of the
+ * disk. It then reverses direction and repeats.
+ * ===================================================== */
 
 /**
- * SCAN (Elevator) Algorithm
- * Head moves in one direction until it reaches the end, then reverses
- * Services all requests in its path
- * Characteristics: Fair distribution, predictable, better than FCFS
+ * Implements the SCAN (Elevator) Algorithm.
+ * Characteristics: Fairer than SSTF, prevents starvation.
  */
 class SCAN extends AlgorithmBase {
+
     /**
-     * Execute SCAN algorithm
-     * @returns {Array<number>} Sequence of disk positions visited
+     * Gets the description for the SCAN algorithm.
+     * @static
+     * @returns {string} The algorithm's description.
      */
-    execute() {
-        const sequence = this.initializeSequence();
-        let currentPos = this.initialPosition;
-
-        // Determine initial direction based on parameter
-        let movingUp = (this.direction === 'high');
-
-        // Get requests on left and right
-        const leftRequests = this.getRequestsLessThan(currentPos, true);   // Descending order
-        const rightRequests = this.getRequestsGreaterOrEqual(currentPos, true); // Ascending order
-
-        // Remove current position from rightRequests if it exists
-        const rightFiltered = rightRequests.filter(r => r !== currentPos);
-
-        if (movingUp) {
-            // Moving towards high (right) first
-            sequence.push(...rightFiltered);
-            sequence.push(...leftRequests);
-        } else {
-            // Moving towards low (left) first
-            sequence.push(...leftRequests);
-            sequence.push(...rightFiltered);
-        }
-
-        return sequence;
+    static get description() {
+        return 'SCAN (Elevator Algorithm): The head moves to one end of the disk, servicing requests. It then reverses, servicing requests on the way back.';
     }
 
     /**
-     * Get algorithm description
-     * @returns {string}
+     * Executes the SCAN (Elevator) algorithm.
+     * @returns {Array<number>} The sequence of disk positions visited.
      */
-    getDescription() {
-        return 'SCAN: Elevator Algorithm. Head moves in one direction serving all requests until it reaches the end, then reverses direction. Fair and predictable.';
+    execute() {
+        const sequence = this.initializeSequence(); // [initialPosition]
+        
+        // Get all requests to the left and right, including the current position
+        // getRequestsLessOrEqual is sorted descending (e.g., [53, 37, 14])
+        const leftRequests = this.getRequestsLessOrEqual(this.initialPosition, true);
+        // getRequestsGreaterOrEqual is sorted ascending (e.g., [53, 65, 98])
+        const rightRequests = this.getRequestsGreaterOrEqual(this.initialPosition, true);
+
+        // Remove the initial position itself from the lists,
+        // as it's already in the sequence.
+        if (leftRequests[0] === this.initialPosition) {
+            leftRequests.shift();
+        }
+        if (rightRequests[0] === this.initialPosition) {
+            rightRequests.shift();
+        }
+        
+        if (this.direction === 'high') {
+            // 1. Move high (right), servicing requests
+            sequence.push(...rightRequests);
+            
+            // 2. **SCAN Logic:** Go to the end (maxTrack) if there are requests on the left to come back for.
+            if (leftRequests.length > 0) {
+                if (sequence[sequence.length - 1] !== this.maxTrack) {
+                    sequence.push(this.maxTrack);
+                }
+            }
+            
+            // 3. Move back low (left), servicing remaining requests
+            sequence.push(...leftRequests);
+
+        } else { // direction === 'low'
+            // 1. Move low (left), servicing requests
+            sequence.push(...leftRequests);
+            
+            // 2. **SCAN Logic:** Go to the end (0) if there are requests on the right to come back for.
+            if (rightRequests.length > 0) {
+                 if (sequence[sequence.length - 1] !== 0) {
+                    sequence.push(0);
+                }
+            }
+           
+            // 3. Move back high (right), servicing remaining requests
+            sequence.push(...rightRequests);
+        }
+
+        return sequence;
     }
 }
 

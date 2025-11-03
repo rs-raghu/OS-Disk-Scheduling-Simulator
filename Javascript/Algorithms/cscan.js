@@ -1,49 +1,67 @@
 /* =====================================================
-   JS/ALGORITHMS/CSCAN.JS - C-SCAN (CIRCULAR SCAN) ALGORITHM
-   ===================================================== */
+ * JS/ALGORITHMS/CSCAN.JS - C-SCAN (CIRCULAR SCAN) ALGORITHM
+ * -----------------------------------------------------
+ * The head moves in one direction (e.g., high) servicing
+ * all requests until it hits the end of the disk (maxTrack).
+ * It then "jumps" to the other end (0) and continues
+ * moving in the *same* direction (high) servicing
+ * the remaining requests.
+ * ===================================================== */
 
 /**
- * C-SCAN (Circular SCAN) Algorithm
- * Head moves in one direction serving requests, then jumps back to the beginning
- * Only services requests in one direction per pass
- * Characteristics: Provides uniform wait time, more fair than SCAN
+ * Implements the C-SCAN (Circular SCAN) algorithm.
+ * Characteristics: Provides a more uniform wait time than SCAN.
  */
 class CSCAN extends AlgorithmBase {
+
     /**
-     * Execute C-SCAN algorithm
-     * @returns {Array<number>} Sequence of disk positions visited
+     * Gets the description for the C-SCAN algorithm.
+     * @static
+     * @returns {string} The algorithm's description.
+     */
+    static get description() {
+        return 'C-SCAN (Circular SCAN): The head moves to one end, then jumps to the other and continues in the same direction.';
+    }
+
+    /**
+     * Executes the C-SCAN (Circular) algorithm.
+     * @returns {Array<number>} The sequence of disk positions visited.
      */
     execute() {
-        const sequence = this.initializeSequence();
-        let currentPos = this.initialPosition;
+        const sequence = this.initializeSequence(); // [initialPosition]
 
-        // Get requests on left and right
-        const leftRequests = this.getRequestsLessThan(currentPos, true);   // Descending order
-        const rightRequests = this.getRequestsGreaterOrEqual(currentPos, true); // Ascending order
+        // 1. Get requests at or to the right, sorted ascending
+        const rightRequests = this.getRequestsGreaterOrEqual(this.initialPosition, true);
+        
+        // 2. Get requests to the left, sorted ascending
+        const leftRequests = this.getRequestsLessThan(this.initialPosition, true).reverse(); // .reverse() to make ascending
+        
+        // Remove initial position if it was in the list
+        if (rightRequests[0] === this.initialPosition) {
+            rightRequests.shift();
+        }
 
-        // Remove current position from rightRequests if it exists
-        const rightFiltered = rightRequests.filter(r => r !== currentPos);
+        // --- C-SCAN Logic (always moves high) ---
 
-        // C-SCAN always goes right first, services all requests, then wraps around
-        // Service requests to the right (including current position)
-        sequence.push(...rightFiltered);
+        // 1. Service all requests to the right
+        sequence.push(...rightRequests);
 
-        // Jump to 0 if there are requests on the left
+        // 2. If there are requests on the left, scan to the end,
+        // jump to 0, and service the left requests.
         if (leftRequests.length > 0) {
+            // 2a. Move to the end of the disk if not already there
+            if (sequence[sequence.length - 1] !== this.maxTrack) {
+                sequence.push(this.maxTrack);
+            }
+            
+            // 2b. Jump to the start of the disk
             sequence.push(0);
-            // Service requests from left side in ascending order (since we're going right)
+            
+            // 2c. Service the remaining (left) requests
             sequence.push(...leftRequests);
         }
 
         return sequence;
-    }
-
-    /**
-     * Get algorithm description
-     * @returns {string}
-     */
-    getDescription() {
-        return 'C-SCAN: Circular SCAN. Head moves in one direction serving all requests to the right, then jumps to 0 and services requests from the left. Provides more uniform wait time than SCAN.';
     }
 }
 

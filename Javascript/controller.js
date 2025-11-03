@@ -1,38 +1,71 @@
 /* =====================================================
  * JS/CONTROLLER.JS - APPLICATION CONTROLLER
+ * -----------------------------------------------------
+ * This class acts as the "brain" of the application.
+ * It connects the State (data), the Renderer (view),
+ * and the user interface (HTML elements).
+ *
+ * Responsibilities:
+ * - Setting up all event listeners.
+ * - Orchestrating the simulation (generating, starting, stopping).
+ * - Managing the animation loop (using requestAnimationFrame).
+ * - Handling all UI updates (stats, queues, buttons).
+ * - Managing PDF export.
  * ===================================================== */
 
 class Controller {
+    /**
+     * Creates a new Controller instance.
+     * @param {StateManager} stateManager - The application's state manager.
+     * @param {CanvasRenderer} canvasRenderer - The application's canvas renderer.
+     * @param {function} showSimulationView - Function to show the simulation panel.
+     * @param {function} showConfigView - Function to show the configuration panel.
+     */
     constructor(stateManager, canvasRenderer, showSimulationView, showConfigView) {
         this.state = stateManager;
         this.renderer = canvasRenderer;
         this.algorithms = new Map();
-        this.animationInterval = null;
         
-        // --- NEW: UI View-Switching Functions ---
-        // These are passed in from main.js
+        // View-switching functions from main.js
         this.showSimulationView = showSimulationView;
         this.showConfigView = showConfigView;
 
-        // --- NEW: Button Element Cache ---
-        // We cache these elements for performance
+        /**
+         * A cache for frequently accessed DOM elements.
+         * @type {Object<string, HTMLElement>}
+         */
         this.ui = {};
+
+        // --- Animation Loop Properties ---
+        /**
+         * The ID of the current animation frame request.
+         * @type {number | null}
+         * @private
+         */
+        this.animationFrameId = null;
+        
+        /**
+         * The timestamp of the last animation step.
+         * @type {number}
+         * @private
+         */
+        this.lastTimestamp = 0;
     }
 
     /**
-     * Register an algorithm
-     * @param {string} name - Algorithm name
-     * @param {Function} AlgorithmClass - Algorithm class
+     * Registers a new algorithm class with the controller.
+     * @param {string} name - The short name (key) of the algorithm (e.g., "fcfs").
+     * @param {class} AlgorithmClass - The algorithm class (e.g., FCFS).
      */
     registerAlgorithm(name, AlgorithmClass) {
         this.algorithms.set(name, AlgorithmClass);
     }
 
     /**
-     * Initialize the application
+     * Initializes the controller by caching UI elements and setting up listeners.
      */
     init() {
-        // --- NEW: Cache all UI elements ---
+        // Cache all UI elements for performance
         this.ui.playPauseBtn = document.getElementById('playPauseBtn');
         this.ui.stepForwardBtn = document.getElementById('stepForwardBtn');
         this.ui.stepBackwardBtn = document.getElementById('stepBackwardBtn');
@@ -41,26 +74,36 @@ class Controller {
         this.ui.algorithmSelect = document.getElementById('algorithmSelect');
         this.ui.speedSlider = document.getElementById('speedSlider');
 
+        // Statistics elements
+        this.ui.currentHeadPosition = document.getElementById('currentHeadPosition');
+        this.ui.totalHeadMovement = document.getElementById('totalHeadMovement');
+        this.ui.seeksCount = document.getElementById('seeksCount');
+        this.ui.averageSeekTime = document.getElementById('averageSeekTime');
+        this.ui.nextTargetDisplay = document.getElementById('nextTargetDisplay');
+
+        // Queue containers
+        this.ui.initialQueue = document.getElementById('initialQueue');
+        this.ui.servicedQueue = document.getElementById('servicedQueue');
+        
+        // Step display
+        this.ui.currentStepDisplay = document.getElementById('currentStepDisplay');
+        this.ui.currentActionText = document.getElementById('currentActionText'); // For errors/info
+        this.ui.algorithmDescription = document.getElementById('algorithmDescription');
+
         // Setup event listeners for the SIMULATION PANEL
         this.setupEventListeners();
     }
 
     /**
-     * Setup all event listeners
+     * Sets up all event listeners for the simulation controls.
      * @private
      */
     setupEventListeners() {
-        // --- UPDATED: Listen to the NEW buttons ---
         this.ui.playPauseBtn.addEventListener('click', () => this.toggleRunPause());
         this.ui.stepForwardBtn.addEventListener('click', () => this.handleStepForward());
         this.ui.stepBackwardBtn.addEventListener('click', () => this.handleStepBackward());
-        
-        // This button now just resets the animation to step 0
         this.ui.resetBtn.addEventListener('click', () => this.handleResetAnimation());
-        
         this.ui.exportBtn.addEventListener('click', () => this.handleExport());
-
-        // Parameter inputs (algorithm select is in main.js)
         this.ui.speedSlider.addEventListener('input', (e) => this.handleSpeedChange(e));
 
         // Window resize
@@ -68,12 +111,12 @@ class Controller {
     }
 
     /**
-     * --- NEW: Called by main.js when "Run Simulation" is clicked ---
+     * Handles the click of the main "Run Simulation" button.
+     * Validates inputs, generates the simulation, and switches to the sim view.
      */
     handleRunSimulation() {
         console.log('Handle Run Simulation');
-        // --- MODIFICATION: Call generateSimulation with silent=false ---
-        const success = this.generateSimulation(false); // This will now show errors
+        const success = this.generateSimulation(false); // false = show errors
         if (success) {
             // Only switch views if generation was successful
             this.showSimulationView();
@@ -83,7 +126,8 @@ class Controller {
     }
 
     /**
-     * --- NEW: Called by main.js when "Reset Algorithm" is clicked ---
+     * Handles the click of the "Reset Algorithm" button.
+     * Stops animation, clears state, and returns to the config view.
      */
     handleFullReset() {
         console.log('Handle Full Reset');
@@ -95,79 +139,71 @@ class Controller {
         this.renderer.resetTrace(); 
         this.renderer.render(); 
         
-        // --- MODIFICATION: Manually clear the persistent queues ---
-        const initialContainer = document.getElementById('initialQueue');
-        const servicedContainer = document.getElementById('servicedQueue');
-        if (initialContainer) {
-            initialContainer.innerHTML = '<span class="queue-empty">No simulation run</span>';
+        // Manually clear the persistent queue displays
+        if (this.ui.initialQueue) {
+            this.ui.initialQueue.innerHTML = '<span class="queue-empty">No simulation run</span>';
         }
-        if (servicedContainer) {
-            servicedContainer.innerHTML = '<span class="queue-empty">No services yet</span>';
+        if (this.ui.servicedQueue) {
+            this.ui.servicedQueue.innerHTML = '<span class="queue-empty">No services yet</span>';
         }
-        // --- END MODIFICATION ---
 
         this.showConfigView(); // Switch back to config panel
     }
 
 
     /**
-     * Generate simulation with current parameters
-     * @param {boolean} [silent=false] - If true, will not show validation errors
+     * Generates the simulation steps based on the current DOM parameters.
+     * @param {boolean} [silent=false] - If true, validation errors will not be shown to the user.
+     * @returns {boolean} True if simulation was generated successfully, false otherwise.
      */
-    generateSimulation(silent = false) { // --- MODIFICATION: Added silent flag ---
+    generateSimulation(silent = false) {
         try {
             this.stopAnimation(); // Stop any running animation
 
-            // Get parameters from DOM
+            // 1. Get parameters from DOM
             const params = this.getParametersFromDOM();
 
-            // Validate parameters
+            // 2. Validate parameters and initialize state
             this.state.initializeWithParams(params);
             const validation = this.state.validateParameters();
 
             if (!validation.valid) {
-                // --- MODIFICATION: Only show error if not in silent mode ---
                 if (!silent) {
                     this.showError('Error: ' + validation.errors.join('\n'));
                 }
                 return false; // Indicate failure
             }
 
-            // Get algorithm class
+            // 3. Get the correct algorithm class
             const AlgorithmClass = this.algorithms.get(this.state.algorithm);
             if (!AlgorithmClass) {
                 throw new Error(`Algorithm ${this.state.algorithm} not found`);
             }
 
-            // Generate sequence
+            // 4. Generate the full sequence of steps
             this.state.generateSequence(AlgorithmClass);
             this.renderer.resetTrace();
             this.renderer.updateTraceHistory();
 
-            // Update UI
-            this.updateAllUI(); // This will now update the serviced queue to its Step 0 state (empty)
+            // 5. Update UI to Step 0
+            this.updateAllUI(); // Updates stats, queues, etc. to their initial state
             this.updateAlgorithmDescription();
-            
-            // --- MODIFICATION: Populate the initial queue ---
             this.updateInitialQueue();
-            // --- END MODIFICATION ---
-
+            
             return true; // Indicate success
 
         } catch (error) {
-            // --- THIS IS THE FIX ---
-            // Only log and show errors if we are NOT in silent mode
             if (!silent) {
-                console.error('Error generating simulation:', error); // Moved here
+                console.error('Error generating simulation:', error);
                 this.showError('Error: ' + error.message);
             }
-            // --- END OF FIX ---
             return false; // Indicate failure
         }
     }
 
     /**
-     * Get parameters from DOM elements
+     * Reads all input values from the DOM.
+     * @returns {object} An object containing all configuration parameters.
      * @private
      */
     getParametersFromDOM() {
@@ -181,17 +217,16 @@ class Controller {
     }
 
     /**
-     * Toggle run/pause animation
-     * @param {boolean} [forcePlay] - Optional flag to force play
+     * Toggles the animation between running and paused states.
+     * @param {boolean | null} [forcePlay=null] - If true, force play. If false, force pause.
      */
     toggleRunPause(forcePlay = null) {
+        // If the animation is finished, "Play" becomes "Replay"
         if (this.state.isComplete()) {
             this.handleResetAnimation();
-            // After resetting, we want to start playing again
-            forcePlay = true; 
+            forcePlay = true; // Always play after reset
         }
 
-        // Determine new state
         const shouldBeRunning = forcePlay !== null ? forcePlay : !this.state.isRunning;
 
         if (shouldBeRunning) {
@@ -208,49 +243,79 @@ class Controller {
     }
 
     /**
-     * Start animation loop
+     * Starts the animation loop using requestAnimationFrame.
      * @private
      */
     startAnimation() {
-        if (this.animationInterval) {
-            clearInterval(this.animationInterval);
+        if (this.animationFrameId) {
+            // Loop is already running
+            return;
         }
-
-        const delay = this.state.getAnimationDelay();
-
-        this.animationInterval = setInterval(() => {
-            if (!this.state.nextStep()) {
-                // --- Animation finished ---
-                this.stopAnimation();
-                this.state.pause();
-                this.ui.playPauseBtn.innerHTML = '<span class="btn-text">Replay</span>';
-                this.ui.playPauseBtn.classList.remove('active');
-            } else {
-                 // Normal step
-                this.renderer.updateTraceHistory();
-                 this.updateAllUI(); // This will update pending queue and stats
-            }
-        }, delay);
+        
+        // Reset last timestamp to start fresh
+        this.lastTimestamp = performance.now();
+        
+        // Bind the loop function to `this` context
+        const animationLoop = this.animationLoop.bind(this);
+        this.animationFrameId = requestAnimationFrame(animationLoop);
     }
 
     /**
-     * Stop animation loop
+     * The main animation loop.
+     * @param {number} timestamp - The current time provided by requestAnimationFrame.
+     * @private
+     */
+    animationLoop(timestamp) {
+        if (!this.state.isRunning) {
+            this.animationFrameId = null; // Stop the loop
+            return;
+        }
+
+        const delay = this.state.getAnimationDelay();
+        const elapsed = timestamp - this.lastTimestamp;
+
+        if (elapsed > delay) {
+            this.lastTimestamp = timestamp - (elapsed % delay); // Adjust timestamp
+            
+            if (!this.state.nextStep()) {
+                // --- Animation finished ---
+                this.stopAnimation(); // This also pauses state
+                this.ui.playPauseBtn.innerHTML = '<span class="btn-text">Replay</span>';
+                this.ui.playPauseBtn.classList.remove('active');
+            } else {
+                // --- Normal step ---
+                this.renderer.updateTraceHistory();
+                this.updateAllUI(); // This will update pending queue and stats
+            }
+        }
+
+        // Request the next frame
+        if (this.state.isRunning) {
+             this.animationFrameId = requestAnimationFrame(this.animationLoop.bind(this));
+        } else {
+            this.animationFrameId = null;
+        }
+    }
+
+
+    /**
+     * Stops the animation loop.
      * @private
      */
     stopAnimation() {
-        if (this.animationInterval) {
-            clearInterval(this.animationInterval);
-            this.animationInterval = null;
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
         }
         this.state.pause(); // Ensure state knows it's paused
     }
 
     /**
-     * Handle step forward button
+     * Handles the "Step Forward" button click.
      */
     handleStepForward() {
         this.stopAnimation();
-        this.ui.playPauseBtn.innerHTML = '<span class="btn-icon">▶️</span><span class="btn-text">Play</span>';
+        this.ui.playPauseBtn.innerHTML = '<span class="btn-text">Play</span>';
         this.ui.playPauseBtn.classList.remove('active');
 
         if (this.state.nextStep()) {
@@ -260,11 +325,11 @@ class Controller {
     }
 
     /**
-     * Handle step backward button
+     * Handles the "Step Backward" button click.
      */
     handleStepBackward() {
         this.stopAnimation();
-        this.ui.playPauseBtn.innerHTML = '<span class="btn-icon">▶️</span><span class="btn-text">Play</span>';
+        this.ui.playPauseBtn.innerHTML = '<span class="btn-text">Play</span>';
         this.ui.playPauseBtn.classList.remove('active');
 
         if (this.state.previousStep()) {
@@ -274,43 +339,36 @@ class Controller {
     }
 
     /**
-     * Handle reset button (Resets animation to step 0)
+     * Handles the "Reset Animation" button click.
+     * Resets the animation to step 0 without regenerating data.
      */
     handleResetAnimation() {
         this.stopAnimation();
-        this.state.jumpToStep(0); // Go to step 0, don't regenerate
+        this.state.jumpToStep(0); // Go to step 0
         this.renderer.resetTrace();
         this.renderer.updateTraceHistory();
 
         this.ui.playPauseBtn.innerHTML = '<span class="btn-text">Play</span>';
         this.ui.playPauseBtn.classList.remove('active');
 
-        // --- MODIFICATION: Call full UI update ---
-        // This will now correctly update the "Executed Queue" to be empty (Step 0)
+        // Update UI to reflect Step 0
         this.updateAllUI();
-        // --- END MODIFICATION ---
     }
 
     /**
-     * Handle algorithm change
-     */
-    handleAlgorithmChange() {
-        this.generateSimulation(true); // Run silently on algo change
-    }
-
-    /**
-     * Handle speed slider change
+     * Handles the animation speed slider change.
+     * @param {Event} event - The input event from the slider.
      */
     handleSpeedChange(event) {
         const speed = parseInt(event.target.value);
         this.state.setAnimationSpeed(speed);
-        if (this.state.isRunning) {
-            this.startAnimation();
-        }
+        // No need to restart the loop, the new delay will be picked up
+        // on the next frame check.
     }
 
     /**
-     * Handle export to PDF
+     * Handles the "Export PDF" button click.
+     * Pauses animation, generates PDF, and resumes.
      */
     async handleExport() {
         const wasRunning = this.state.isRunning;
@@ -318,14 +376,14 @@ class Controller {
             this.toggleRunPause(false); // Force pause
         }
 
+        // Wait a moment for UI to settle
         await new Promise(resolve => setTimeout(resolve, 50));
 
-        // --- MODIFICATION: Jump to final step for a complete screenshot ---
-        const currentStep = this.state.currentStepIndex; // Save current step
+        // Save current step, jump to end for a complete report
+        const currentStep = this.state.currentStepIndex;
         this.state.jumpToStep(this.state.allSteps.length - 1);
         this.renderer.updateTraceHistory();
-        this.updateAllUI(); // This updates the serviced queue to its final state
-        // --- END MODIFICATION ---
+        this.updateAllUI(); // Update UI to final state
 
         try {
             const exportData = this.state.getExportData();
@@ -335,20 +393,22 @@ class Controller {
             this.showError('Error: ' + error.message);
         }
 
-        // --- MODIFICATION: Jump back to the step you were on ---
+        // Jump back to the step the user was on
         this.state.jumpToStep(currentStep);
         this.renderer.updateTraceHistory();
-        this.updateAllUI(); // This updates the serviced queue back to its previous state
-        // --- END MODIFICATION ---
+        this.updateAllUI(); // Update UI back to previous state
 
         if (wasRunning) {
-           this.toggleRunPause(true); // Force play
+           this.toggleRunPause(true); // Resume playing
         }
     }
 
 
     /**
-     * Generate PDF report
+     * Generates a multi-page PDF report of the simulation.
+     * This is a complex utility function. In a larger refactor,
+     * it could be moved to its own `PDFGenerator.js` module.
+     * @param {object} exportData - Data object from stateManager.getExportData().
      * @private
      */
     async generatePDF(exportData) {
@@ -566,62 +626,60 @@ class Controller {
     }
 
     /**
-     * Update all UI elements
+     * Updates all real-time UI elements (stats, queues, etc.)
      * @private
      */
     updateAllUI() {
         this.updateStatistics();
-        
-        // --- MODIFICATION: Added live update for Serviced Queue ---
-        this.updateServicedQueue();
-        // --- END MODIFICATION ---
-
+        this.updateServicedQueue(); // Live update of serviced queue
         this.updateStepInfo();
-        this.updateActionText();
+        this.updateActionText(); // Clear/update any info text
         this.renderer.render();
     }
 
     /**
-     * Update statistics display
+     * Updates the "Live Statistics" panel.
      * @private
      */
     updateStatistics() {
-        document.getElementById('currentHeadPosition').textContent = this.state.currentHeadPosition;
-        document.getElementById('totalHeadMovement').textContent = this.state.totalHeadMovement;
-        document.getElementById('seeksCount').textContent = this.state.seeksCount;
-        document.getElementById('averageSeekTime').textContent = this.state.averageSeekTime.toFixed(2);
-        document.getElementById('nextTargetDisplay').textContent = this.state.nextTarget !== null ? this.state.nextTarget : '-';
+        // Use cached UI elements
+        this.ui.currentHeadPosition.textContent = this.state.currentHeadPosition;
+        this.ui.totalHeadMovement.textContent = this.state.totalHeadMovement;
+        this.ui.seeksCount.textContent = this.state.seeksCount;
+        this.ui.averageSeekTime.textContent = this.state.averageSeekTime.toFixed(2);
+        this.ui.nextTargetDisplay.textContent = this.state.nextTarget !== null ? this.state.nextTarget : '-';
     }
 
 
     /**
-     * --- NEW FUNCTION: To populate the initial queue list ---
+     * Populates the "Initial Request Queue" display.
+     * This is typically called once at the start.
+     * @private
      */
     updateInitialQueue() {
-        const initialContainer = document.getElementById('initialQueue');
-        if (!initialContainer) return;
+        if (!this.ui.initialQueue) return;
 
         if (this.state.requestQueue.length === 0) {
-            initialContainer.innerHTML = '<span class="queue-empty">No simulation run</span>';
+            this.ui.initialQueue.innerHTML = '<span class="queue-empty">No simulation run</span>';
         } else {
-            initialContainer.innerHTML = this.state.requestQueue
+            this.ui.initialQueue.innerHTML = this.state.requestQueue
                 .map(req => `<span class="queue-item">${req}</span>`)
                 .join('');
         }
     }
 
     /**
-     * --- MODIFICATION: This function now updates the queue LIVE ---
+     * Updates the "Executed Queue (Serviced)" display live.
+     * @private
      */
     updateServicedQueue() {
-        const servicedContainer = document.getElementById('servicedQueue');
-        if (!servicedContainer) return;
+        if (!this.ui.servicedQueue) return;
 
         // Get the serviced queue from the *current* step
         if (this.state.servicedRequests.length === 0) {
-            servicedContainer.innerHTML = '<span class="queue-empty">None serviced</span>';
+            this.ui.servicedQueue.innerHTML = '<span class="queue-empty">None serviced</span>';
         } else {
-            servicedContainer.innerHTML = this.state.servicedRequests
+            this.ui.servicedQueue.innerHTML = this.state.servicedRequests
                 .map(req => `<span class="queue-item">${req}</span>`)
                 .join('');
         }
@@ -629,63 +687,63 @@ class Controller {
 
 
     /**
-     * Update step information
+     * Updates the "Step: X / Y" display.
      * @private
      */
     updateStepInfo() {
-        document.getElementById('currentStepDisplay').textContent = `Step: ${this.state.getStepInfo()}`;
-    }
-
-    /**
-     * Update action text
-     * @private
-     */
-    updateActionText() {
-        const actionTextEl = document.getElementById('currentActionText');
-        if (actionTextEl) {
-             const currentStep = this.state.getCurrentStep();
-            if (currentStep) {
-                actionTextEl.textContent = currentStep.currentAction;
-                actionTextEl.style.color = 'var(--color-text-primary)';
-                actionTextEl.style.fontWeight = 'var(--font-weight-medium)';
-            }
+        if (this.ui.currentStepDisplay) {
+            this.ui.currentStepDisplay.textContent = `Step: ${this.state.getStepInfo()}`;
         }
     }
 
     /**
-     * Update algorithm description
+     * Updates the action text (e.g., for step descriptions or errors).
+     * @private
+     */
+    updateActionText() {
+        if (this.ui.currentActionText) {
+             const currentStep = this.state.getCurrentStep();
+             if (currentStep) {
+                this.ui.currentActionText.textContent = currentStep.currentAction;
+                this.ui.currentActionText.style.color = 'var(--color-text-primary)';
+                this.ui.currentActionText.style.fontWeight = 'var(--font-weight-medium)';
+             }
+        }
+    }
+
+    /**
+     * Updates the algorithm description text in the header.
+     * @private
      */
     updateAlgorithmDescription() {
-        const descEl = document.getElementById('algorithmDescription');
-        if (!descEl) return;
+        if (!this.ui.algorithmDescription) return;
 
         const AlgorithmClass = this.algorithms.get(this.state.algorithm);
         
-        // --- MODIFICATION: Get description from static property ---
         let description = "Algorithm Visualizer";
         if (AlgorithmClass && AlgorithmClass.description) {
             description = AlgorithmClass.description;
         } else if (AlgorithmClass) {
             description = this.state.algorithm.toUpperCase() + " Algorithm";
         }
-        // --- END MODIFICATION ---
         
-        descEl.textContent = description;
+        this.ui.algorithmDescription.textContent = description;
     }
 
     /**
-     * --- NEW: Show a non-blocking error ---
+     * Displays an error message to the user.
+     * @param {string} message - The error message to display.
+     * @private
      */
     showError(message) {
         console.error(message);
-        const errorEl = document.getElementById('currentActionText');
-        if (errorEl) {
-            errorEl.textContent = message;
-            errorEl.style.color = 'red';
-            errorEl.style.fontWeight = 'bold';
-            errorEl.parentElement.style.display = 'block'; // Make sure it's visible
+        if (this.ui.currentActionText) {
+            this.ui.currentActionText.textContent = message;
+            this.ui.currentActionText.style.color = 'red';
+            this.ui.currentActionText.style.fontWeight = 'bold';
+            this.ui.currentActionText.parentElement.style.display = 'block'; // Make sure it's visible
         } else {
-            alert(message); // Fallback
+            alert(message); // Fallback if the text element is missing
         }
     }
 }
