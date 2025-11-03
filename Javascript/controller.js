@@ -72,7 +72,8 @@ class Controller {
      */
     handleRunSimulation() {
         console.log('Handle Run Simulation');
-        const success = this.generateSimulation();
+        // --- MODIFICATION: Call generateSimulation with silent=false ---
+        const success = this.generateSimulation(false); // This will now show errors
         if (success) {
             // Only switch views if generation was successful
             this.showSimulationView();
@@ -111,8 +112,9 @@ class Controller {
 
     /**
      * Generate simulation with current parameters
+     * @param {boolean} [silent=false] - If true, will not show validation errors
      */
-    generateSimulation() {
+    generateSimulation(silent = false) { // --- MODIFICATION: Added silent flag ---
         try {
             this.stopAnimation(); // Stop any running animation
 
@@ -124,8 +126,10 @@ class Controller {
             const validation = this.state.validateParameters();
 
             if (!validation.valid) {
-                // Use a non-blocking alert
-                this.showError('Error: ' + validation.errors.join('\n'));
+                // --- MODIFICATION: Only show error if not in silent mode ---
+                if (!silent) {
+                    this.showError('Error: ' + validation.errors.join('\n'));
+                }
                 return false; // Indicate failure
             }
 
@@ -151,8 +155,13 @@ class Controller {
             return true; // Indicate success
 
         } catch (error) {
-            console.error('Error generating simulation:', error);
-            this.showError('Error: ' + error.message);
+            // --- THIS IS THE FIX ---
+            // Only log and show errors if we are NOT in silent mode
+            if (!silent) {
+                console.error('Error generating simulation:', error); // Moved here
+                this.showError('Error: ' + error.message);
+            }
+            // --- END OF FIX ---
             return false; // Indicate failure
         }
     }
@@ -286,7 +295,7 @@ class Controller {
      * Handle algorithm change
      */
     handleAlgorithmChange() {
-        this.generateSimulation();
+        this.generateSimulation(true); // Run silently on algo change
     }
 
     /**
@@ -343,63 +352,120 @@ class Controller {
      * @private
      */
     async generatePDF(exportData) {
-        // ... (This function is unchanged and correct) ...
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'pt', 'a4');
+
+        // --- STYLING CONSTANTS ---
+        const COLOR_PRIMARY = '#007BFF'; // Blue
+        const COLOR_DARK = '#333333';    // Dark gray text
+        const COLOR_LIGHT = '#777777';   // Light gray text
+        const COLOR_BG = '#F8F9FA';      // Light gray background
+        const COLOR_WHITE = '#FFFFFF';
         const margin = 40;
         const pageWidth = doc.internal.pageSize.getWidth();
         const contentWidth = pageWidth - margin * 2;
         let yPos = margin;
-        doc.setFontSize(20);
+
+        // --- HELPER FUNCTION: Draw Section Header ---
+        const drawSectionHeader = (text, y) => {
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(COLOR_DARK);
+            doc.text(text, margin, y);
+            y += 8; // space for line
+            doc.setDrawColor(COLOR_PRIMARY); // Blue line
+            doc.setLineWidth(2);
+            doc.line(margin, y, margin + contentWidth, y);
+            return y + 25; // Return new yPos
+        };
+
+        // --- HELPER FUNCTION: Draw Key-Value Pair ---
+        const drawKeyValue = (key, value, y) => {
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(COLOR_DARK);
+            doc.text(key + ':', margin + 10, y);
+            
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(COLOR_DARK);
+            doc.text(String(value), margin + 160, y); // Align values
+            return y + 20;
+        };
+
+        // --- 1. TITLE & TIMESTAMP ---
+        doc.setFontSize(22);
         doc.setFont(undefined, 'bold');
+        doc.setTextColor(COLOR_PRIMARY);
         doc.text('Disk Scheduling Report', pageWidth / 2, yPos, { align: 'center' });
-        yPos += 20;
+        yPos += 25;
         doc.setFontSize(10);
         doc.setFont(undefined, 'normal');
-        doc.setTextColor(100);
+        doc.setTextColor(COLOR_LIGHT);
         doc.text(`Generated: ${exportData.timestamp}`, pageWidth / 2, yPos, { align: 'center' });
-        yPos += 30;
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(0);
-        doc.text('Parameters', margin, yPos);
-        yPos += 20;
-        doc.setFontSize(11);
-        doc.setFont(undefined, 'normal');
-        doc.text(`Algorithm: ${exportData.algorithm.toUpperCase()}`, margin, yPos);
-        yPos += 18;
-        doc.text(`Initial Head Position: ${exportData.initialHeadPosition}`, margin, yPos);
-        yPos += 18;
-        doc.text(`Max Track Number: ${exportData.maxTrackNumber}`, margin, yPos);
-        yPos += 18;
+        yPos += 40;
+
+        // --- 2. PARAMETERS ---
+        yPos = drawSectionHeader('Parameters', yPos);
+        const paramYStart = yPos; // For box drawing
+
+        yPos = drawKeyValue('Algorithm', exportData.algorithm.toUpperCase(), yPos);
+        yPos = drawKeyValue('Initial Head Position', exportData.initialHeadPosition, yPos);
+        yPos = drawKeyValue('Max Track Number', exportData.maxTrackNumber, yPos);
         if (exportData.direction) {
-             doc.text(`Direction: ${exportData.direction}`, margin, yPos);
-             yPos += 18;
+            yPos = drawKeyValue('Direction', exportData.direction, yPos);
         }
-        doc.text('Request Queue:', margin, yPos);
-        yPos += 18;
+        
+        // Request Queue (special handling)
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(COLOR_DARK);
+        doc.text('Request Queue:', margin + 10, yPos);
+        yPos += 20;
         doc.setFontSize(10);
-        doc.setTextColor(80);
-        const queueText = doc.splitTextToSize(exportData.requestQueue.join(', '), contentWidth);
-        doc.text(queueText, margin, yPos);
-        yPos += (queueText.length * 12) + 10;
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(0);
-        doc.text('Results', margin, yPos);
-        yPos += 20;
-        doc.setFontSize(11);
         doc.setFont(undefined, 'normal');
-        doc.text(`Total Head Movement: ${exportData.totalHeadMovement}`, margin, yPos);
-        yPos += 18;
-        doc.text(`Total Seeks: ${exportData.seeksCount}`, margin, yPos);
-        yPos += 18;
-        doc.text(`Average Seek Time: ${exportData.averageSeekTime}`, margin, yPos);
+        doc.setTextColor(COLOR_LIGHT);
+        const queueText = doc.splitTextToSize(exportData.requestQueue.join(', '), contentWidth - 20);
+        doc.text(queueText, margin + 10, yPos);
+        yPos += (queueText.length * 12) + 10;
+
+        // Draw box around parameters
+        doc.setDrawColor(COLOR_LIGHT);
+        doc.setLineWidth(0.5);
+        doc.rect(margin, paramYStart - 20, contentWidth, yPos - paramYStart + 10, 'S'); // 'S' = stroke
         yPos += 30;
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.text('Visuals', margin, yPos);
-        yPos += 20;
+
+        // --- 3. RESULTS (STAT BOXES) ---
+        yPos = drawSectionHeader('Results', yPos);
+        
+        const statWidth = (contentWidth - 20) / 3; // 3 stats, 10pt padding
+        const statHeight = 60;
+
+        // Helper to draw a stat box
+        const drawStatBox = (x, y, w, h, label, value) => {
+            doc.setFillColor(COLOR_BG);
+            doc.setDrawColor(COLOR_PRIMARY);
+            doc.setLineWidth(1);
+            doc.rect(x, y, w, h, 'FD'); // Fill and Draw
+
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(COLOR_LIGHT);
+            doc.text(label, x + w / 2, y + 20, { align: 'center' });
+
+            doc.setFontSize(18);
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(COLOR_PRIMARY);
+            doc.text(String(value), x + w / 2, y + 45, { align: 'center' });
+        };
+
+        drawStatBox(margin, yPos, statWidth, statHeight, 'Total Head Movement', exportData.totalHeadMovement);
+        drawStatBox(margin + statWidth + 10, yPos, statWidth, statHeight, 'Total Seeks', exportData.seeksCount);
+        drawStatBox(margin + (statWidth + 10) * 2, yPos, statWidth, statHeight, 'Average Seek Time', exportData.averageSeekTime);
+
+        yPos += statHeight + 40;
+
+        // --- 4. VISUALS ---
+        yPos = drawSectionHeader('Visuals', yPos);
+        
         try {
             const diskCanvas = document.getElementById('diskCanvas');
             const graphCanvas = document.getElementById('graphCanvas');
@@ -411,38 +477,91 @@ class Controller {
             const graphRatio = graphImg.height / graphImg.width;
             const imgHeightDisk = contentWidth * diskRatio;
             const imgHeightGraph = contentWidth * graphRatio;
+
+            // Check for page break before adding images
+            if (yPos + imgHeightDisk + imgHeightGraph + 80 > doc.internal.pageSize.getHeight()) {
+                doc.addPage();
+                yPos = margin;
+            }
+
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(COLOR_DARK);
             doc.text('Disk Trace:', margin, yPos);
-            yPos += 15;
+            yPos += 20;
             doc.addImage(diskImgData, 'PNG', margin, yPos, contentWidth, imgHeightDisk);
             yPos += imgHeightDisk + 20;
+
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(COLOR_DARK);
             doc.text('Position vs. Time Graph:', margin, yPos);
-            yPos += 15;
+            yPos += 20;
             doc.addImage(graphImgData, 'PNG', margin, yPos, contentWidth, imgHeightGraph);
             yPos += imgHeightGraph + 20;
+
         } catch (e) {
             console.error('Error adding canvas images:', e);
             doc.setTextColor(255, 0, 0);
             doc.text('Error rendering canvas images.', margin, yPos);
             yPos += 20;
         }
+
+        // --- 5. EXECUTION TRACE (NEW PAGE) ---
         doc.addPage();
         yPos = margin;
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(0);
-        doc.text('Execution Trace', margin, yPos);
-        yPos += 20;
-        doc.setFontSize(10);
+        yPos = drawSectionHeader('Execution Trace', yPos);
+
+        doc.setFontSize(9);
         doc.setFont(undefined, 'normal');
+
         for (const step of exportData.allSteps) {
-            const text = `Step ${step.step}: Head at ${step.headPosition}, Seek: ${step.seekDistance}, Total Move: ${step.totalHeadMovement}, Serviced: [${step.servicedQueue.join(', ')}]`;
+            // Check for page break
             if (yPos > doc.internal.pageSize.getHeight() - margin) {
                 doc.addPage();
                 yPos = margin;
+                yPos = drawSectionHeader('Execution Trace (continued)', yPos); // Add new header
+                doc.setFontSize(9);
+                doc.setFont(undefined, 'normal');
             }
-            doc.text(text, margin, yPos);
-            yPos += 15;
+
+            // Draw a light box for each step row
+            const rowHeight = 20;
+            doc.setFillColor((step.step % 2 === 0) ? COLOR_BG : COLOR_WHITE);
+            doc.rect(margin, yPos, contentWidth, rowHeight, 'F'); // Fill
+
+            let xPos = margin + 5;
+            const yText = yPos + 14; // Vertically centered text
+
+            // Step Number
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(COLOR_PRIMARY);
+            doc.text(`Step ${step.step}:`, xPos, yText);
+            xPos += 60;
+
+            // Other info
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(COLOR_DARK);
+            
+            doc.text(`Head: ${step.headPosition}`, xPos, yText);
+            xPos += 70;
+            
+            doc.text(`Seek: ${step.seekDistance}`, xPos, yPos + 14);
+            xPos += 50;
+
+            doc.text(`Total Move: ${step.totalHeadMovement}`, xPos, yText);
+            xPos += 80;
+
+            // Serviced Queue (truncated)
+            doc.setTextColor(COLOR_LIGHT);
+            const servicedText = `Serviced: [${step.servicedQueue.join(', ') || '-'}]`;
+            const truncatedText = doc.splitTextToSize(servicedText, contentWidth - xPos - 5);
+            doc.text(truncatedText[0], xPos, yText); // Only show first line
+
+            yPos += rowHeight;
         }
+
+        // --- SAVE THE PDF ---
         doc.save(`disk-scheduling-${exportData.algorithm}.pdf`);
     }
 
@@ -548,7 +667,7 @@ class Controller {
             description = AlgorithmClass.description;
         } else if (AlgorithmClass) {
             description = this.state.algorithm.toUpperCase() + " Algorithm";
-}
+        }
         // --- END MODIFICATION ---
         
         descEl.textContent = description;
@@ -575,4 +694,3 @@ class Controller {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = Controller;
 }
-

@@ -86,7 +86,7 @@ function initializeApp() {
             
             // 2. Re-generate the simulation to update the state
             // This will also update the "Initial Request Queue" box
-            controller.generateSimulation();
+            controller.generateSimulation(true); // Run in silent mode
         };
 
         // Attach the *single* handler to all inputs
@@ -97,8 +97,9 @@ function initializeApp() {
         directionInputs.forEach(input => input.addEventListener('change', handleInputChange));
 
         // Call it once on load to set initial state
+        // --- CLEANUP: Changed from handleInputChange(true) ---
         handleInputChange();
-        // --- END OF MODIFICATION ---
+        // --- END OF CLEANUP ---
 
 
         // 8. Handle initial canvas sizing
@@ -107,8 +108,6 @@ function initializeApp() {
 
 
         // --- MODIFICATION: REMOVED Redundant UI Update ---
-        // The call to handleInputChange() above already generates
-        // the simulation and updates the UI. This line is not needed.
         // controller.updateAllUI();
         // --- END MODIFICATION ---
 
@@ -147,4 +146,3 @@ window.addEventListener('error', (event) => {
 window.addEventListener('unhandledrejection', (event) => {
     console.error('Unhandled promise rejection:', event.reason);
 });
-
