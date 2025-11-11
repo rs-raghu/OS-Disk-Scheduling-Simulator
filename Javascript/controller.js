@@ -341,6 +341,7 @@ class Controller {
         const doc = new jsPDF('p', 'pt', 'a4');
         const margin = 40;
         let pageWidth = doc.internal.pageSize.getWidth();
+        let pageHeight = doc.internal.pageSize.getHeight();
         let contentWidth = pageWidth - margin * 2;
         let yPos = 0; // Start at 0 to draw the header
 
@@ -399,9 +400,70 @@ class Controller {
 
         yPos += 80;
 
-        // --- 3. Request Queue ---
+        // --- START OF RE-ORDER ---
+
+        // --- 3. Execution Trace (Moved from Page 2) ---
         doc.setFontSize(16);
         doc.setFont(undefined, 'bold');
+        doc.setTextColor(0);
+        doc.text('Execution Trace', margin, yPos);
+        doc.setLineWidth(1.5);
+        doc.line(margin, yPos + 8, pageWidth - margin, yPos + 8); // Underline
+        yPos += 30;
+
+        // Prepare data for the table
+        const tableHead = [['Step', 'Head Position', 'Seek Distance', 'Total Movement', 'Serviced']];
+        const tableBody = exportData.allSteps.map(step => [
+            step.step,
+            step.headPosition,
+            step.seekDistance,
+            step.totalHeadMovement,
+            // Show the request that was *just* serviced on this step
+            step.servicedQueue.length > 0 ? step.servicedQueue[step.servicedQueue.length - 1] : '-'
+        ]);
+        
+        // Fix for Step 0, which has no serviced item
+        tableBody[0][4] = '-'; 
+
+        // Use autoTable plugin to draw the table
+        doc.autoTable({
+            head: tableHead,
+            body: tableBody,
+            startY: yPos,
+            theme: 'grid',
+            headStyles: {
+                fillColor: themeBlack,
+                textColor: themeYellow,
+                fontStyle: 'bold',
+                lineWidth: 2,
+                lineColor: themeBlack
+            },
+            styles: {
+                font: 'Inter',
+                fontSize: 10,
+                cellPadding: 6,
+                borderColor: themeBlack,
+                lineWidth: 1
+            },
+            alternateRowStyles: {
+                fillColor: themeGray
+            }
+        });
+
+        // Update yPos to be *after* the table
+        yPos = doc.autoTable.previous.finalY + 30;
+
+        // --- 4. Request Queue (Moved from Section 3) ---
+        
+        // Check if there's enough space for the queue, add a new page if not
+        if (yPos + (exportData.requestQueue.length * 1.2) + 60 > pageHeight) {
+             doc.addPage();
+             yPos = margin;
+        }
+
+        doc.setFontSize(16);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(0);
         doc.text('Initial Request Queue', margin, yPos);
         doc.setLineWidth(1.5);
         doc.line(margin, yPos + 8, pageWidth - margin, yPos + 8); // Underline
@@ -412,11 +474,11 @@ class Controller {
         doc.setTextColor(80);
         const queueText = doc.splitTextToSize(exportData.requestQueue.join(', '), contentWidth);
         doc.text(queueText, margin, yPos);
-        yPos += (queueText.length * 12) + 20;
-
         
-        // --- 4. Visuals (Canvas Images) ---
-        // --- START OF FIX ---
+        // --- END OF RE-ORDER ---
+
+
+        // --- 5. Visuals (Canvas Images) ---
         doc.addPage('landscape'); // Add a new page in landscape mode
         const landscapePageWidth = doc.internal.pageSize.getWidth();
         const landscapePageHeight = doc.internal.pageSize.getHeight();
@@ -453,61 +515,6 @@ class Controller {
             // Add error text in the middle of the blank page
             doc.text('Error rendering canvas images.', landscapePageWidth / 2, landscapePageHeight / 2, { align: 'center' });
         }
-        // --- END OF FIX ---
-
-
-        // --- 5. Execution Trace (New Page) ---
-        doc.addPage('portrait'); // Add a new page *back* in portrait mode
-        pageWidth = doc.internal.pageSize.getWidth(); // Get portrait width again
-        contentWidth = pageWidth - margin * 2; // Get portrait content width
-        yPos = margin;
-        
-        doc.setFontSize(16);
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(0);
-        doc.text('Execution Trace', margin, yPos);
-        doc.setLineWidth(1.5);
-        doc.line(margin, yPos + 8, pageWidth - margin, yPos + 8); // Underline
-        yPos += 30;
-
-        // Prepare data for the table
-        const tableHead = [['Step', 'Head Position', 'Seek Distance', 'Total Movement', 'Serviced']];
-        const tableBody = exportData.allSteps.map(step => [
-            step.step,
-            step.headPosition,
-            step.seekDistance,
-            step.totalHeadMovement,
-            // Show the request that was *just* serviced on this step
-            step.servicedQueue.length > 0 ? step.servicedQueue[step.servicedQueue.length - 1] : '-'
-        ]);
-        
-        // Fix for Step 0, which has no serviced item
-        tableBody[0][4] = '-'; 
-
-        // Use autoTable plugin to draw the table
-        doc.autoTable({
-            head: tableHead,
-            body: tableBody,
-            startY: yPos,
-            theme: 'grid', // 'striped', 'grid', or 'plain'
-            headStyles: {
-                fillColor: themeBlack,
-                textColor: themeYellow,
-                fontStyle: 'bold',
-                lineWidth: 2,
-                lineColor: themeBlack
-            },
-            styles: {
-                font: 'Inter', // Match your app font
-                fontSize: 10,
-                cellPadding: 6,
-                borderColor: themeBlack,
-                lineWidth: 1
-            },
-            alternateRowStyles: {
-                fillColor: themeGray
-            }
-        });
 
         // --- Save PDF ---
         doc.save(`disk-scheduling-${exportData.algorithm}.pdf`);
@@ -613,7 +620,7 @@ class Controller {
     }
 }
 
-// Export for use in main.js
+// Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = Controller;
 }
