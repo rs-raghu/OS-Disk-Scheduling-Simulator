@@ -433,3 +433,36 @@ input[type=range]::-moz-range-track {
   box-shadow: var(--theme-shadow-hover);
   border: 2px solid var(--theme-white);
 }
+
+/* ===================================
+ * CREATOR/SIGNATURE STYLES
+ * =================================== */
+.creator-name {
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary);
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.creator-link,
+.creator-link a {
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.creator-link a {
+    /* Use theme color for link */
+    color: var(--theme-blue); 
+    text-decoration: underline;
+}
+
+#creator-details {
+    /* Override queue container padding to look like a clean block */
+    padding: 0.75rem; 
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
