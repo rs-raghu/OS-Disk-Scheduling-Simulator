@@ -46,21 +46,21 @@
 .sidebar .control-grid {
   display: flex;
   flex-direction: column;
-  gap: 5rem; /* MODIFICATION: Increased from 1rem */
+  gap: 1.75rem; 
 }
 
 .sidebar .control-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem; /* This is the gap between "Initial Head" and "Max Track" */
+  gap: 1rem; 
 }
 
 .sidebar .control-group {
   padding-bottom: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.28rem; /* MODIFICATION: Increased from 0.35rem */
-  flex: 1 1 100px; /* Allow items to grow and shrink */
+  gap: 0.28rem; 
+  flex: 1 1 100px; 
 }
 
 .sidebar .control-group.full-width {
@@ -125,7 +125,7 @@
 }
 
 .sidebar .info-section {
-  padding: 0; /* Padding is now on the h3 */
+  padding: 0; 
   border: none;
   box-shadow: none;
 }
@@ -149,7 +149,7 @@
   flex-direction: column;
   gap: 1.25rem; 
   padding: 1.25rem; 
-  overflow-y: auto; /* Allow main content to scroll */
+  overflow-y: auto; 
   height: 100vh;
   background-color: var(--color-background-light);
 }
@@ -157,28 +157,33 @@
 /* Stats Card Layout */
 .stats-card {
   width: 100%;
+  flex-shrink: 0; /* Prevent stats card from shrinking */
 }
 
 .stats-grid {
   display: grid;
-  /* MODIFICATION: 5 equal columns */
   grid-template-columns: repeat(5, 1fr);
   gap: 0.75rem;
 }
 
-/* Disk & Graph Container Layout */
-.disk-container,
+/* MODIFICATION: Removed .disk-container styles */
+
+/* Graph Container Layout */
 .graph-container {
   display: flex;
   flex-direction: column;
   padding: 1rem;
-  overflow: auto; /* Hide canvas overflow */
-  resize: both;
-}
+  overflow: hidden; 
+  
+  /* MODIFICATION: Make graph enlarge to fill space */
+  flex-grow: 1;
+  min-height: 400px; /* Give it a large minimum height */
+  /* END MODIFICATION */
 
-.disk-container {
-  position: relative; /* For the head tracker */
-  padding-top: 2.5rem; /* Space for the head tracker */
+  background-color: var(--color-background);
+  border-radius: var(--theme-radius);
+  border: var(--theme-border-style);
+  box-shadow: var(--theme-shadow);
 }
 
 .graph-container h3 {
@@ -188,6 +193,7 @@
   text-transform: uppercase;
   margin-bottom: 0.5rem;
   text-align: center;
+  flex-shrink: 0; /* Prevent title from shrinking */
 }
 
 .step-info {
@@ -195,6 +201,8 @@
   font-size: 0.875rem;
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
+  padding-bottom: 0.5rem;
+  flex-shrink: 0; /* Prevent step info from shrinking */
 }
 
 /* ===================================
@@ -204,7 +212,7 @@
   .app-container {
     grid-template-columns: 1fr; /* Stack columns */
     height: auto;
-    overflow: auto; /* Allow full page scroll */
+    overflow: auto; 
   }
 
   .sidebar {
@@ -228,4 +236,3 @@
     grid-column: 1 / -1;
   }
 }
-

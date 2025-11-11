@@ -6,26 +6,36 @@
     <meta name="description" content="Interactive OS Disk Scheduling Algorithm Visualizer">
     <title>OS Disk Scheduling Simulator</title>
 
+    <!-- CSS Files -->
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/animations.css">
-    
+
+    <!-- External Libraries for PDF Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
     <div class="app-container">
 
+        <!-- ========================
+              SIDEBAR (COLUMN 1)
+              ======================== -->
         <div class="sidebar">
 
+            <!-- 1. CONTROLS -->
             <header class="control-panel">
                 <div class="header-title">
-                    <h1>OS Disk Scheduling [23BAI0092]</h1>
+                    <h1>OS Disk Scheduling</h1>
                     <p id="algorithmDescription">Algorithm Visualizer</p>
                 </div>
 
                 <div class="control-grid">
 
+                    <!-- =================================== -->
+                    <!-- STATE 1: CONFIGURATION (Visible)    -->
+                    <!-- =================================== -->
                     <div id="config-panel">
                         <div class="control-row">
                             <div class="control-group">
@@ -52,6 +62,7 @@
                             </div>
                         </div>
 
+                        <!-- Row 2: Request Queue & Direction -->
                         <div class="control-row">
                             <div class="control-group full-width">
                                 <label for="requestQueue">Request Queue (comma-separated):</label>
@@ -73,17 +84,29 @@
                             </div>
                         </div>
 
+                        <!-- Error Message -->
+                        <div class="control-row">
+                            <p id="configError" class="error-message" style="display: none;"></p>
+                        </div>
+
+                        <!-- Run Button -->
                         <div class="control-row">
                             <button id="runSimulationBtn" class="btn btn-primary" title="Run the simulation" style="width: 100%;">
                                 <span class="btn-text">Run Simulation</span>
                             </button>
                         </div>
-                    </div> <div id="simulation-panel" style="display: none;">
+                    </div>
 
+                    <!-- =================================== -->
+                    <!-- STATE 2: SIMULATION (Hidden)        -->
+                    <!-- =================================== -->
+                    <div id="simulation-panel" style="display: none;">
                         <div class="control-row button-row">
                             <button id="playPauseBtn" class="btn btn-primary" title="Play/Pause Animation">
-                                <span class="btn-icon">⏸️</span>
                                 <span class="btn-text">Pause</span>
+                            </button>
+                            <button id="resetBtn" class="btn btn-secondary" title="Reset Animation to Step 0">
+                                <span class="btn-text">Reset Anim</span>
                             </button>
                             <button id="stepBackwardBtn" class="btn btn-secondary" title="Step Backward">
                                 <span class="btn-text">Step Back</span>
@@ -91,11 +114,9 @@
                             <button id="stepForwardBtn" class="btn btn-secondary" title="Step Forward">
                                 <span class="btn-text">Step Forward</span>
                             </button>
-                            <button id="resetBtn" class="btn btn-secondary" title="Reset Animation to Step 0">
-                                <span class="btn-text">Reset Animation</span>
-                            </button>
                         </div>
 
+                        <!-- Row 4: Speed Control & Export -->
                         <div class="control-row">
                             <div class="speed-control-group">
                                 <label for="speedSlider">Animation Speed:</label>
@@ -106,30 +127,6 @@
                                 </div>
                             </div>
                         </div>
-                        
-                        
-                        <aside class="information-panel">
-                
-                            <div class="info-section">
-                                <h3>Initial Request Queue</h3>
-                                <div class="queue-container">
-                                    <div id="initialQueue" class="queue-list">
-                                        <span class="queue-empty">No simulation run</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="info-section">
-                                <h3>Executed Queue (Serviced)</h3>
-                                <div class="queue-container">
-                                    <div id="servicedQueue" class="queue-list">
-                                        <span class="queue-empty">No services yet</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </aside>
-
                         <div class="control-row">
                             <button id="exportBtn" class="btn btn-success" title="Export to PDF" style="width: 100%;">
                                 <span class="btn-text">Export PDF</span>
@@ -140,18 +137,43 @@
                                 <span class="btn-text">Reset Algorithm</span>
                             </button>
                         </div>
-                        
-                    </div> </div>
+
+                        <!-- 2. INFO PANEL (MOVED INSIDE) -->
+                        <aside class="information-panel">
+                            <div class="info-section">
+                                <h3>Initial Request Queue</h3>
+                                <div class="queue-container">
+                                    <div id="initialQueue" class="queue-list">
+                                        <span class="queue-empty">No requests loaded</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="info-section">
+                                <h3>Executed Queue (Serviced)</h3>
+                                <div class="queue-container">
+                                    <div id="servicedQueue" class="queue-list">
+                                        <span class="queue-empty">No services yet</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </aside>
+                    </div> <!-- End of simulation-panel -->
+                </div>
             </header>
-            
         </div> 
+        <!-- ========================
+              END OF SIDEBAR (COLUMN 1)
+              ======================== -->
+
+
+        <!-- ========================
+              VISUALIZATION PANEL (COLUMN 2)
+              ======================== -->
         <section class="visualization-panel">
 
-            <div class="card stats-card">
-                <div class="card-header">
-                    <h3>📊 Live Statistics</h3>
-                </div>
-                <div id="stats-grid" class="stats-grid">
+            <!-- Live Statistics -->
+            <div class="stats-card">
+                <div class="stats-grid">
                     <div class="stat-box">
                         <span class="stat-label">Total Head Movement</span>
                         <span class="stat-value" id="totalHeadMovement">0</span>
@@ -165,44 +187,64 @@
                         <span class="stat-value" id="averageSeekTime">0.00</span>
                     </div>
                     <div class="stat-box">
-                        <span class="stat-label">Next Target</span>
-                        <span class="stat-value" id="nextTargetDisplay">-</span>
-                    </div>
-                     <div class="stat-box">
                         <span class="stat-label">Current Head Position</span>
                         <span class="stat-value" id="currentHeadPosition">0</span>
                     </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Next Target</span>
+                        <span class="stat-value" id="nextTargetDisplay">-</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="disk-container card">
-                <canvas id="diskCanvas" class="disk-canvas" width="1000" height="200"></canvas>
-            </div>
+            <!-- MODIFICATION: REMOVED disk-container and disk-tooltip -->
 
-            <div class="graph-container card">
-                <div class="card-header">
-                    <h3>Position vs. Time Graph</h3>
-                </div>
+            <!-- Position vs. Time Graph -->
+            <div class="graph-container">
+                <h3>Position vs. Time Graph</h3>
                 <canvas id="graphCanvas" class="graph-canvas" width="1000" height="300"></canvas>
             </div>
 
+            <!-- Step Information -->
             <div class="step-info">
                 <span id="currentStepDisplay">Step: 0 / 0</span>
             </div>
             
-            <div id="disk-tooltip"></div>
         </section>
-        </div> 
+        <!-- ========================
+              END OF VISUALIZATION (COLUMN 2)
+              ======================== -->
+        
+    </div> 
+    <!-- ========================
+           END OF APP-CONTAINER
+           ======================== -->
+
+    <!-- ========================
+           JAVASCRIPT FILES
+           ======================== -->
+
+    <!-- Phase 1: State Management -->
     <script src="Javascript/state-manager.js"></script>
+
+    <!-- Phase 2: Canvas Rendering -->
     <script src="Javascript/canvas-renderer.js"></script>
+
+    <!-- Phase 3: Algorithm Base Class -->
     <script src="Javascript/Algorithms/algorithm-base.js"></script>
+
+    <!-- Phase 4: Individual Algorithms -->
     <script src="Javascript/Algorithms/fcfs.js"></script>
     <script src="Javascript/Algorithms/sstf.js"></script>
     <script src="Javascript/Algorithms/scan.js"></script>
     <script src="Javascript/Algorithms/cscan.js"></script>
     <script src="Javascript/Algorithms/look.js"></script>
     <script src="Javascript/Algorithms/clook.js"></script>
+
+    <!-- Phase 5: Controller -->
     <script src="Javascript/controller.js"></script>
+
+    <!-- Phase 6: Main Entry Point -->
     <script src="Javascript/main.js"></script>
 
 </body>
