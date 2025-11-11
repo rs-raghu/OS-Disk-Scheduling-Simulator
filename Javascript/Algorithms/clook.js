@@ -30,26 +30,54 @@ class CLOOK extends AlgorithmBase {
     execute() {
         const sequence = this.initializeSequence(); // [initialPosition]
 
-        // 1. Get requests at or to the right, sorted ascending
-        const rightRequests = this.getRequestsGreaterOrEqual(this.initialPosition, true);
-        
-        // 2. Get requests to the left, sorted ascending
-        const leftRequests = this.getRequestsLessThan(this.initialPosition, true).reverse(); // .reverse() to make ascending
-        
-        // Remove initial position if it was in the list
-        if (rightRequests[0] === this.initialPosition) {
-            rightRequests.shift();
-        }
+        // --- C-LOOK LOGIC ---
+        // This algorithm depends on the starting direction
 
-        // --- C-LOOK Logic (always moves high) ---
+        if (this.direction === 'high') {
+            // 1. Get requests at or to the right, sorted ascending
+            const rightRequests = this.getRequestsGreaterOrEqual(this.initialPosition, true);
+            
+            // 2. Get requests to the left, sorted ascending
+            // (getRequestsLessThan sorts b-a, so we reverse it to get a-b)
+            const leftRequests = this.getRequestsLessThan(this.initialPosition, true).reverse(); 
+            
+            // Remove initial position if it was in the list
+            if (rightRequests.length > 0 && rightRequests[0] === this.initialPosition) {
+                rightRequests.shift();
+            }
 
-        // 1. Service all requests to the right
-        sequence.push(...rightRequests);
+            // 1. Service all requests to the right (ascending)
+            sequence.push(...rightRequests);
 
-        // 2. If there are requests on the left, jump to them
-        // and service them in ascending order.
-        if (leftRequests.length > 0) {
+            // 2. If there are requests on the left, jump to them
+            //    and service them (ascending)
+            if (leftRequests.length > 0) {
+                sequence.push(...leftRequests);
+            }
+
+        } else { // Direction is 'low'
+            
+            // 1. Get requests at or to the left, sorted descending
+            // (getRequestsLessOrEqual sorts b-a by default)
+            const leftRequests = this.getRequestsLessOrEqual(this.initialPosition, true);
+
+            // 2. Get requests to the right, sorted descending
+            // (getRequestsGreaterThan sorts a-b, so we reverse it to get b-a)
+            const rightRequests = this.getRequestsGreaterThan(this.initialPosition, true).reverse();
+
+            // Remove initial position if it was in the list
+            if (leftRequests.length > 0 && leftRequests[0] === this.initialPosition) {
+                leftRequests.shift();
+            }
+
+            // 1. Service all requests to the left (descending)
             sequence.push(...leftRequests);
+
+            // 2. If there are requests on the right, jump to them
+            //    and service them (descending)
+            if (rightRequests.length > 0) {
+                sequence.push(...rightRequests);
+            }
         }
 
         return sequence;

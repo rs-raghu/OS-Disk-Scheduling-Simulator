@@ -22,7 +22,7 @@ class StateManager {
         this.requestQueue = [98, 183, 37, 122, 14, 124, 65, 67];
         /** @type {string} The initial direction for SCAN/LOOK ('low' or 'high'). */
         this.direction = 'low';
-        
+
         // --- Simulation State ---
         /** @type {Array<object>} An array of all pre-calculated steps. */
         this.allSteps = [];
@@ -32,7 +32,7 @@ class StateManager {
         this.isRunning = false;
         /** @type {number} The speed of the animation (1-10). */
         this.animationSpeed = 5;
-        
+
         // --- Live Statistics (derived from the current step) ---
         /** @type {number} Total seeks distance accumulated up to the current step. */
         this.totalHeadMovement = 0;
@@ -48,7 +48,7 @@ class StateManager {
         this.servicedRequests = [];
         /** @type {number | null} The next track the head will move to. */
         this.nextTarget = null;
-        
+
         /** @type {boolean} Flag to indicate if params have been set. */
         this.isInitialized = false;
 
@@ -72,7 +72,7 @@ class StateManager {
         // Parse the queue string *after* setting maxTrackNumber for validation
         this.requestQueue = this.parseRequestQueue(params.requestQueue) || [];
         this.direction = params.direction || 'low';
-        
+
         // Reset simulation with these new base parameters
         this.resetSimulation();
         this.isInitialized = true;
@@ -97,7 +97,7 @@ class StateManager {
                 return !isNaN(num) ? num : null;
             })
             .filter(num => num !== null && num >= 0 && num <= maxTrack);
-        
+
         // Remove duplicates
         return [...new Set(requests)];
     }
@@ -111,7 +111,7 @@ class StateManager {
         this.allSteps = [];
         this.currentStepIndex = 0;
         this.isRunning = false;
-        
+
         // Reset statistics based on initial params
         this.totalHeadMovement = 0;
         this.seeksCount = 0;
@@ -133,8 +133,8 @@ class StateManager {
      */
     generateSequence(algorithmClass) {
         // Start from a clean slate based on current params
-        this.resetSimulation(); 
-        
+        this.resetSimulation();
+
         try {
             // 1. Create algorithm instance
             const algorithm = new algorithmClass(
@@ -155,20 +155,19 @@ class StateManager {
             if (this.allSteps.length === 0) {
                 this.allSteps = [this.createInitialStep()];
             }
-            
+
             // 5. Fix the nextTarget for Step 0
             if (this.allSteps.length > 1) {
                 this.allSteps[0].nextTarget = this.allSteps[1].headPosition;
             } else {
                 this.allSteps[0].nextTarget = null; // No moves to make
             }
-            
+
             // 6. Update main state properties to reflect Step 0
             this.updateStatistics();
             return this.allSteps;
 
         } catch (error) {
-            console.error('Error generating sequence:', error);
             this.allSteps = [this.createInitialStep()]; // Reset to initial on error
             this.updateStatistics();
             return this.allSteps;
@@ -195,6 +194,7 @@ class StateManager {
             nextTarget: null, // Will be set in generateSequence
             totalHeadMovement: 0,
             seekDistance: 0,
+            moveType: 'initial',
             pendingQueue: [...pendingQueue],
             servicedQueue: [],
             currentAction: `Starting at position ${this.initialHeadPosition}. ${pendingQueue.length} pending requests.`
@@ -205,7 +205,31 @@ class StateManager {
             const previousPos = sequence[i - 1];
             const currentPos = sequence[i];
             const seekDistance = Math.abs(currentPos - previousPos);
+
+            // Always add the full seek distance, even for wraps.
             totalMovement += seekDistance;
+
+            // Keep moveType logic for visual styling (dotted line)
+            let moveType = 'seek';
+
+            // Check for C-SCAN wrap
+            if (this.algorithm === 'cscan') {
+                if ((previousPos === 0 && currentPos === this.maxTrackNumber) ||
+                    (previousPos === this.maxTrackNumber && currentPos === 0)) {
+                    moveType = 'wrap';
+                }
+            }
+
+            // Check for C-LOOK wrap
+            if (this.algorithm === 'clook' && this.requestQueue.length > 0) {
+                const minReq = Math.min(...this.requestQueue);
+                const maxReq = Math.max(...this.requestQueue);
+
+                if ((previousPos === minReq && currentPos === maxReq) ||
+                    (previousPos === maxReq && currentPos === minReq)) {
+                    moveType = 'wrap';
+                }
+            }
 
             // Check if this move just serviced a request
             let servicedThisStep = false;
@@ -223,10 +247,11 @@ class StateManager {
                 headPosition: currentPos,
                 nextTarget: nextTarget,
                 totalHeadMovement: totalMovement,
-                seekDistance: seekDistance,
+                seekDistance: seekDistance, // Store the *actual* distance for display
+                moveType: moveType,
                 pendingQueue: [...pendingQueue],
                 servicedQueue: [...servicedQueue],
-                currentAction: this.generateActionText(previousPos, currentPos, seekDistance, pendingQueue, servicedThisStep)
+                currentAction: this.generateActionText(previousPos, currentPos, seekDistance, pendingQueue, servicedThisStep, moveType)
             });
         }
 
@@ -240,12 +265,18 @@ class StateManager {
      * @param {number} seekDistance - The distance of this move.
      * @param {Array<number>} pendingQueue - The remaining queue.
      * @param {boolean} serviced - Whether a request was serviced at toPos.
+     * @param {string} [moveType='seek'] - The type of move ('seek' or 'wrap').
      * @returns {string} The descriptive action text.
      * @private
      */
-    generateActionText(fromPos, toPos, seekDistance, pendingQueue, serviced) {
+    generateActionText(fromPos, toPos, seekDistance, pendingQueue, serviced, moveType = 'seek') {
         const servicedText = serviced ? ' ✓ Serviced!' : '';
         const pendingText = pendingQueue.length > 0 ? `${pendingQueue.length} pending` : 'All requests serviced!';
+
+        if (moveType === 'wrap') {
+            return `Wrapping from ${fromPos} → ${toPos} (Seek: ${seekDistance}) | ${pendingText}`;
+        }
+
         return `Moving from ${fromPos} → ${toPos} (Seek: ${seekDistance})${servicedText} | ${pendingText}`;
     }
 
@@ -263,6 +294,7 @@ class StateManager {
             nextTarget: nextTarget, // Best guess
             totalHeadMovement: 0,
             seekDistance: 0,
+            moveType: 'initial',
             pendingQueue: pending,
             servicedQueue: [],
             currentAction: `Ready to start. Head at ${this.initialHeadPosition}. ${pending.length} pending.`
@@ -329,12 +361,15 @@ class StateManager {
         this.pendingRequests = [...currentStep.pendingQueue];
         this.servicedRequests = [...currentStep.servicedQueue];
         this.nextTarget = currentStep.nextTarget;
-        
-        // Calculate average seek time
-        // currentStep.step is the number of seeks performed
+
+        // All moves, including wraps, count as a seek.
         this.seeksCount = currentStep.step;
-        if (this.seeksCount > 0) {
-            this.averageSeekTime = this.totalHeadMovement / this.seeksCount;
+
+        // Get the number of *serviced* requests at this step
+        const servicedCount = currentStep.servicedQueue.length;
+
+        if (servicedCount > 0) {
+            this.averageSeekTime = this.totalHeadMovement / servicedCount;
         } else {
             this.averageSeekTime = 0;
         }
@@ -375,11 +410,15 @@ class StateManager {
         const finalStep = this.allSteps.length > 0
             ? this.allSteps[this.allSteps.length - 1]
             : this.createInitialStep();
-            
-        const finalSeeks = finalStep.step;
+
         const finalTotalMovement = finalStep.totalHeadMovement;
-        const finalAvgSeek = (finalSeeks > 0) ? (finalTotalMovement / finalSeeks) : 0;
-        
+
+        // All moves, including wraps, count as a seek.
+        const finalSeeks = finalStep.step;
+
+        const totalRequests = this.requestQueue.length;
+        const finalAvgSeek = (totalRequests > 0) ? (finalTotalMovement / totalRequests) : 0;
+
         return {
             algorithm: this.algorithm,
             initialHeadPosition: this.initialHeadPosition,
@@ -465,7 +504,7 @@ class StateManager {
         if (this.maxTrackNumber < 10) {
             errors.push('Max track number must be at least 10.');
         }
-        
+
         return {
             valid: errors.length === 0,
             errors: errors

@@ -67,10 +67,6 @@ class Controller {
         this.ui.resetBtn.addEventListener('click', () => this.handleResetAnimation());
         this.ui.exportBtn.addEventListener('click', () => this.handleExport());
         this.ui.speedSlider.addEventListener('input', (e) => this.handleSpeedChange(e));
-        
-        // MODIFICATION: Call renderer's resize on window resize
-        // This is handled by the renderer's render() loop now.
-        // window.addEventListener('resize', () => this.renderer.handleResize());
     }
 
     /**
@@ -78,7 +74,6 @@ class Controller {
      * Validates input and switches to the simulation view.
      */
     handleRunSimulation() {
-        console.log('Handle Run Simulation');
         const success = this.generateSimulation();
         if (success) {
             // Only switch views if generation was successful
@@ -93,16 +88,12 @@ class Controller {
      * Stops animation, clears all data, and switches to config view.
      */
     handleFullReset() {
-        console.log('Handle Full Reset');
         this.stopAnimation();
         
         // Re-initialize state from the DOM
         this.state.initializeWithParams(this.getParametersFromDOM());
         
         this.updateAllUI(); 
-        
-        // MODIFICATION: No longer need resetTrace
-        // this.renderer.resetTrace(); 
         
         this.renderer.render(); 
         
@@ -149,10 +140,6 @@ class Controller {
             // 4. Generate sequence
             this.state.generateSequence(AlgorithmClass);
             
-            // MODIFICATION: No longer need resetTrace or updateTraceHistory
-            // this.renderer.resetTrace();
-            // this.renderer.updateTraceHistory();
-
             // 5. Update UI
             this.updateAllUI(); 
             this.updateAlgorithmDescription();
@@ -161,7 +148,6 @@ class Controller {
             return true; // Indicate success
 
         } catch (error) {
-            console.error('Error generating simulation:', error);
             this.showError('Error: ' + error.message);
             return false; // Indicate failure
         }
@@ -229,8 +215,6 @@ class Controller {
                 this.ui.playPauseBtn.classList.remove('active');
             } else {
                  // Normal step
-                 // MODIFICATION: No longer need updateTraceHistory
-                 // this.renderer.updateTraceHistory();
                  this.updateAllUI(); // Update stats, queues, and render canvas
             }
         }, delay);
@@ -257,8 +241,6 @@ class Controller {
         this.ui.playPauseBtn.classList.remove('active');
 
         if (this.state.nextStep()) {
-            // MODIFICATION: No longer need updateTraceHistory
-            // this.renderer.updateTraceHistory();
             this.updateAllUI();
         }
     }
@@ -272,8 +254,6 @@ class Controller {
         this.ui.playPauseBtn.classList.remove('active');
 
         if (this.state.previousStep()) {
-            // MODIFICATION: No longer need updateTraceHistory
-            // this.renderer.updateTraceHistory(); 
             this.updateAllUI();
         }
     }
@@ -285,10 +265,6 @@ class Controller {
         this.stopAnimation();
         this.state.jumpToStep(0); // Go to step 0
         
-        // MODIFICATION: No longer need resetTrace
-        // this.renderer.resetTrace();
-        // this.renderer.updateTraceHistory();
-
         this.ui.playPauseBtn.innerHTML = '<span class="btn-text">Play</span>';
         this.ui.playPauseBtn.classList.remove('active');
 
@@ -333,22 +309,17 @@ class Controller {
         
         // Jump to final step for a complete screenshot
         this.state.jumpToStep(this.state.allSteps.length - 1);
-        // MODIFICATION: No longer need updateTraceHistory
-        // this.renderer.updateTraceHistory();
         this.updateAllUI(); 
 
         try {
             const exportData = this.state.getExportData();
             await this.generatePDF(exportData); // Generate the PDF
         } catch (error) {
-            console.error('Error exporting PDF:', error);
             this.showError('Error: ' + error.message);
         }
 
         // Jump back to the step the user was on
         this.state.jumpToStep(currentStep);
-        // MODIFICATION: No longer need updateTraceHistory
-        // this.renderer.updateTraceHistory();
         this.updateAllUI(); 
 
         // Resume animation if it was running
@@ -365,7 +336,6 @@ class Controller {
      */
     async generatePDF(exportData) {
         const { jsPDF } = window.jspdf;
-        const autoTable = window.jspdf.plugin.autotable; // Get the plugin
         
         // Use A4 portrait, units in 'pt' for better control
         const doc = new jsPDF('p', 'pt', 'a4');
@@ -447,7 +417,6 @@ class Controller {
 
         // --- 4. Visuals (Canvas Images) ---
         try {
-            // MODIFICATION: Only get graphCanvas
             const graphCanvas = document.getElementById('graphCanvas');
             const graphImg = await html2canvas(graphCanvas, { scale: 2 });
             const graphImgData = graphImg.toDataURL('image/png');
@@ -472,12 +441,10 @@ class Controller {
             yPos += imgHeightGraph + 20;
 
         } catch (e) {
-            console.error('Error adding canvas images:', e);
             doc.setTextColor(255, 0, 0);
             doc.text('Error rendering canvas images.', margin, yPos);
             yPos += 20;
         }
-        // --- END MODIFICATION ---
 
         // --- 5. Execution Trace (New Page) ---
         doc.addPage();
@@ -541,8 +508,6 @@ class Controller {
         this.updateStatistics();
         this.updateServicedQueue(); // Live-updates the serviced queue
         this.updateStepInfo();
-        // MODIFICATION: No longer need updateActionText
-        // this.updateActionText();
         this.renderer.render();
     }
 
@@ -602,24 +567,6 @@ class Controller {
     }
 
     /**
-     * Updates the hidden action text (used for errors).
-     * @private
-     */
-    updateActionText() {
-        // MODIFICATION: This element is removed, but we check if it exists
-        // just in case, and to display errors.
-        const actionTextEl = document.getElementById('currentActionText');
-        if (actionTextEl) {
-             const currentStep = this.state.getCurrentStep();
-            if (currentStep) {
-                actionTextEl.textContent = currentStep.currentAction;
-                actionTextEl.style.color = 'var(--color-text-primary)';
-                actionTextEl.style.fontWeight = 'var(--font-weight-medium)';
-            }
-        }
-    }
-
-    /**
      * Updates the algorithm description text in the sidebar.
      */
     updateAlgorithmDescription() {
@@ -629,13 +576,11 @@ class Controller {
         const AlgorithmClass = this.algorithms.get(this.state.algorithm);
         
         let description = "Algorithm Visualizer";
-        // MODIFICATION: Get description from static property
         if (AlgorithmClass && AlgorithmClass.description) {
             description = AlgorithmClass.description;
         } else if (AlgorithmClass) {
             description = this.state.algorithm.toUpperCase() + " Algorithm";
         }
-        // --- END MODIFICATION ---
         
         descEl.textContent = description;
     }
@@ -645,7 +590,6 @@ class Controller {
      * @param {string} message - The error message to display.
      */
     showError(message) {
-        console.error(message);
         const errorEl = document.getElementById('configError');
         if (errorEl) {
             errorEl.textContent = message;

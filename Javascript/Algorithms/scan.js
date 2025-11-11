@@ -36,10 +36,10 @@ class SCAN extends AlgorithmBase {
 
         // Remove the initial position itself from the lists,
         // as it's already in the sequence.
-        if (leftRequests[0] === this.initialPosition) {
+        if (leftRequests.length > 0 && leftRequests[0] === this.initialPosition) {
             leftRequests.shift();
         }
-        if (rightRequests[0] === this.initialPosition) {
+        if (rightRequests.length > 0 && rightRequests[0] === this.initialPosition) {
             rightRequests.shift();
         }
         
@@ -47,11 +47,9 @@ class SCAN extends AlgorithmBase {
             // 1. Move high (right), servicing requests
             sequence.push(...rightRequests);
             
-            // 2. **SCAN Logic:** Go to the end (maxTrack) if there are requests on the left to come back for.
-            if (leftRequests.length > 0) {
-                if (sequence[sequence.length - 1] !== this.maxTrack) {
-                    sequence.push(this.maxTrack);
-                }
+            // 2. **SCAN Logic:** ALWAYS go to the end (maxTrack)
+            if (sequence[sequence.length - 1] !== this.maxTrack) {
+                sequence.push(this.maxTrack);
             }
             
             // 3. Move back low (left), servicing remaining requests
@@ -61,13 +59,11 @@ class SCAN extends AlgorithmBase {
             // 1. Move low (left), servicing requests
             sequence.push(...leftRequests);
             
-            // 2. **SCAN Logic:** Go to the end (0) if there are requests on the right to come back for.
-            if (rightRequests.length > 0) {
-                 if (sequence[sequence.length - 1] !== 0) {
-                    sequence.push(0);
-                }
+            // 2. **SCAN Logic:** ALWAYS go to the end (0)
+            if (sequence[sequence.length - 1] !== 0) {
+                sequence.push(0);
             }
-           
+            
             // 3. Move back high (right), servicing remaining requests
             sequence.push(...rightRequests);
         }

@@ -13,8 +13,6 @@
  */
 function initializeApp() {
     try {
-        console.log('🚀 Initializing OS Disk Scheduling Simulator...');
-
         // 1. Get UI Panel Elements
         const configPanel = document.getElementById('config-panel');
         const simulationPanel = document.getElementById('simulation-panel');
@@ -33,17 +31,13 @@ function initializeApp() {
 
         // 2. Create State Manager
         const stateManager = new StateManager();
-        console.log('✓ State Manager created');
 
         // 3. Create Canvas Renderer
-        // MODIFICATION: Removed 'diskCanvas' argument
         const canvasRenderer = new CanvasRenderer('graphCanvas', stateManager);
-        console.log('✓ Canvas Renderer created');
 
         // 4. Create Controller
         // Pass the view-switching functions to the controller
         const controller = new Controller(stateManager, canvasRenderer, showSimulationView, showConfigView);
-        console.log('✓ Controller created');
 
         // 5. Register all algorithms
         controller.registerAlgorithm('fcfs', FCFS);
@@ -52,11 +46,9 @@ function initializeApp() {
         controller.registerAlgorithm('cscan', CSCAN);
         controller.registerAlgorithm('look', LOOK);
         controller.registerAlgorithm('clook', CLOOK);
-        console.log('✓ All algorithms registered');
 
         // 6. Initialize controller (this sets up its internal listeners)
         controller.init();
-        console.log('✓ Controller initialized');
 
         // 7. --- Setup Main UI Event Listeners ---
 
@@ -69,8 +61,6 @@ function initializeApp() {
         document.getElementById('resetAlgorithmBtn').addEventListener('click', () => {
             controller.handleFullReset();
         });
-
-        // --- MODIFICATION: Add listeners for all inputs ---
         
         // Get all input elements
         const algorithmSelect = document.getElementById('algorithmSelect');
@@ -110,26 +100,8 @@ function initializeApp() {
 
         // Call it once on load to set initial state
         handleInputChange();
-        // --- END OF MODIFICATION ---
-
-        // 8. Handle initial canvas sizing
-        // MODIFICATION: Removed. Renderer now handles its own resize.
-        // canvasRenderer.handleResize();
-        // console.log('✓ Canvas resized');
-
-        // 9. Generate initial simulation (but don't switch view)
-        // This is now handled by handleInputChange(), so we can remove this
-        // controller.generateSimulation();
-
-        // 10. Update UI
-        // This is also handled by handleInputChange()
-        // controller.updateAllUI();
-        // console.log('✓ UI updated');
-
-        console.log('✅ Application ready!');
 
     } catch (error) {
-        console.error('❌ Error initializing application:', error);
         // Use a less intrusive error display
         const errorEl = document.getElementById('configError'); // Use the new error box
         if (errorEl) {
@@ -154,12 +126,12 @@ if (document.readyState === 'loading') {
  * Global error handler
  */
 window.addEventListener('error', (event) => {
-    console.error('Global error:', event.error);
+    // Global error handling logic can go here
 });
 
 /**
  * Unhandled promise rejection handler
  */
 window.addEventListener('unhandledrejection', (event) => {
-    console.error('Unhandled promise rejection:', event.reason);
+    // Global rejection handling logic can go here
 });
