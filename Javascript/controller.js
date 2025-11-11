@@ -572,7 +572,7 @@ class Controller {
             servicedContainer.innerHTML = '<span class="queue-empty">None serviced</span>';
         } else {
             servicedContainer.innerHTML = this.state.servicedRequests
-                .map(req => `<span class.nama="queue-item">${req}</span>`)
+                .map(req => `<span class="queue-item">${req}</span>`)
                 .join('');
         }
     }
