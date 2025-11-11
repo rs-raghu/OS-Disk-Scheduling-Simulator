@@ -408,7 +408,6 @@ input[type=range]::-moz-range-track {
   width: 100%;
   height: auto;
   border-radius: var(--theme-radius); /* Ensure canvas fits rounded corners */
-  min-width: 1000px; /* The 'width' you set in your HTML */
   min-height: 200px; /* The 'height' you set in your HTML */
 }
 
