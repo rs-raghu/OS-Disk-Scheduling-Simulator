@@ -340,8 +340,8 @@ class Controller {
         // Use A4 portrait, units in 'pt' for better control
         const doc = new jsPDF('p', 'pt', 'a4');
         const margin = 40;
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const contentWidth = pageWidth - margin * 2;
+        let pageWidth = doc.internal.pageSize.getWidth();
+        let contentWidth = pageWidth - margin * 2;
         let yPos = 0; // Start at 0 to draw the header
 
         const themeBlack = '#000000';
@@ -416,39 +416,52 @@ class Controller {
 
         
         // --- 4. Visuals (Canvas Images) ---
+        // --- START OF FIX ---
         doc.addPage('landscape'); // Add a new page in landscape mode
         const landscapePageWidth = doc.internal.pageSize.getWidth();
-        const landscapeContentWidth = landscapePageWidth - margin * 2;
-        yPos = margin; // Reset yPos for the new page
-
+        const landscapePageHeight = doc.internal.pageSize.getHeight();
+        
         try {
             const graphCanvas = document.getElementById('graphCanvas');
+            // Capture the canvas
             const graphImg = await html2canvas(graphCanvas, { scale: 2 });
             const graphImgData = graphImg.toDataURL('image/png');
             
-            // Calculate height based on landscape width
+            // Calculate the image's original aspect ratio
             const graphRatio = graphImg.height / graphImg.width;
-            const imgHeightGraph = landscapeContentWidth * graphRatio;
 
-            doc.setFontSize(16);
-            doc.setFont(undefined, 'bold');
-            doc.setTextColor(0);
-            doc.text('Position vs. Time Graph', margin, yPos);
-            doc.setLineWidth(1.5);
-            doc.line(margin, yPos + 8, landscapePageWidth - margin, yPos + 8); // Underline
-            yPos += 30;
+            // 1. Calculate dimensions to fit page width
+            let imgWidth = landscapePageWidth;
+            let imgHeight = imgWidth * graphRatio;
 
-            // Add the image scaled to the landscape page width
-            doc.addImage(graphImgData, 'PNG', margin, yPos, landscapeContentWidth, imgHeightGraph);
+            // 2. Check if this height is taller than the page
+            if (imgHeight > landscapePageHeight) {
+                // If so, recalculate dimensions to fit page height
+                imgHeight = landscapePageHeight;
+                imgWidth = imgHeight / graphRatio;
+            }
+
+            // 3. Calculate offsets to center the image
+            const xOffset = (landscapePageWidth - imgWidth) / 2;
+            const yOffset = (landscapePageHeight - imgHeight) / 2;
+            
+            // Add the image, centered, and scaled to fill the page
+            doc.addImage(graphImgData, 'PNG', xOffset, yOffset, imgWidth, imgHeight);
 
         } catch (e) {
             doc.setTextColor(255, 0, 0);
-            doc.text('Error rendering canvas images.', margin, yPos);
+            // Add error text in the middle of the blank page
+            doc.text('Error rendering canvas images.', landscapePageWidth / 2, landscapePageHeight / 2, { align: 'center' });
         }
+        // --- END OF FIX ---
+
 
         // --- 5. Execution Trace (New Page) ---
         doc.addPage('portrait'); // Add a new page *back* in portrait mode
+        pageWidth = doc.internal.pageSize.getWidth(); // Get portrait width again
+        contentWidth = pageWidth - margin * 2; // Get portrait content width
         yPos = margin;
+        
         doc.setFontSize(16);
         doc.setFont(undefined, 'bold');
         doc.setTextColor(0);
@@ -535,7 +548,7 @@ class Controller {
             initialContainer.innerHTML = '<span class="queue-empty">No simulation run</span>';
         } else {
             initialContainer.innerHTML = this.state.requestQueue
-                .map(req => `<span class.nama="queue-item">${req}</span>`)
+                .map(req => `<span class="queue-item">${req}</span>`)
                 .join('');
         }
     }
@@ -552,7 +565,7 @@ class Controller {
             servicedContainer.innerHTML = '<span class="queue-empty">None serviced</span>';
         } else {
             servicedContainer.innerHTML = this.state.servicedRequests
-                .map(req => `<span class="queue-item">${req}</span>`) // Use the default blue style
+                .map(req => `<span class.nama="queue-item">${req}</span>`)
                 .join('');
         }
     }
