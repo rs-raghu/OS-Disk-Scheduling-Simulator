@@ -414,40 +414,40 @@ class Controller {
         doc.text(queueText, margin, yPos);
         yPos += (queueText.length * 12) + 20;
 
-
+        
         // --- 4. Visuals (Canvas Images) ---
+        doc.addPage('landscape'); // Add a new page in landscape mode
+        const landscapePageWidth = doc.internal.pageSize.getWidth();
+        const landscapeContentWidth = landscapePageWidth - margin * 2;
+        yPos = margin; // Reset yPos for the new page
+
         try {
             const graphCanvas = document.getElementById('graphCanvas');
             const graphImg = await html2canvas(graphCanvas, { scale: 2 });
             const graphImgData = graphImg.toDataURL('image/png');
-            const graphRatio = graphImg.height / graphImg.width;
-            const imgHeightGraph = contentWidth * graphRatio;
             
-            // Check for page break
-            if (yPos + imgHeightGraph + 60 > doc.internal.pageSize.getHeight()) {
-                doc.addPage();
-                yPos = margin;
-            }
+            // Calculate height based on landscape width
+            const graphRatio = graphImg.height / graphImg.width;
+            const imgHeightGraph = landscapeContentWidth * graphRatio;
 
             doc.setFontSize(16);
             doc.setFont(undefined, 'bold');
             doc.setTextColor(0);
             doc.text('Position vs. Time Graph', margin, yPos);
             doc.setLineWidth(1.5);
-            doc.line(margin, yPos + 8, pageWidth - margin, yPos + 8); // Underline
+            doc.line(margin, yPos + 8, landscapePageWidth - margin, yPos + 8); // Underline
             yPos += 30;
 
-            doc.addImage(graphImgData, 'PNG', margin, yPos, contentWidth, imgHeightGraph);
-            yPos += imgHeightGraph + 20;
+            // Add the image scaled to the landscape page width
+            doc.addImage(graphImgData, 'PNG', margin, yPos, landscapeContentWidth, imgHeightGraph);
 
         } catch (e) {
             doc.setTextColor(255, 0, 0);
             doc.text('Error rendering canvas images.', margin, yPos);
-            yPos += 20;
         }
 
         // --- 5. Execution Trace (New Page) ---
-        doc.addPage();
+        doc.addPage('portrait'); // Add a new page *back* in portrait mode
         yPos = margin;
         doc.setFontSize(16);
         doc.setFont(undefined, 'bold');
@@ -535,7 +535,7 @@ class Controller {
             initialContainer.innerHTML = '<span class="queue-empty">No simulation run</span>';
         } else {
             initialContainer.innerHTML = this.state.requestQueue
-                .map(req => `<span class="queue-item">${req}</span>`)
+                .map(req => `<span class.nama="queue-item">${req}</span>`)
                 .join('');
         }
     }
